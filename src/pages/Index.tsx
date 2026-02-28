@@ -2910,7 +2910,7 @@ const swapResp = await fetch("https://quote-api.jup.ag/v6/swap", {
         <img
           src="https://img.freepik.com/free-vector/new-twitter-logo-x-icon-black-background_1017-45427.jpg?semt=ais_rp_progressive&w=740&q=80"
           alt="X"
-          className="w-4 h-4"
+          className="w-8 h-8"
         />
       </a>
 
