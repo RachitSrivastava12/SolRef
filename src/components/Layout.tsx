@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, type ReactNode } from "react";
+import { useState, useEffect, useRef, useMemo, type CSSProperties, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Search, Command, Menu, X, ArrowRight, ExternalLink } from "lucide-react";
 import { Wordmark, SolanaMark } from "./Brand";
@@ -88,17 +88,68 @@ export default function Layout({ children, wide }: { children: ReactNode; wide?:
   useEffect(() => { setMenuOpen(false); }, [loc.pathname]);
 
   const isActive = (to: string) => loc.pathname === to || (to !== "/" && loc.pathname.startsWith(to));
+  const isLanding = loc.pathname === "/";
+  const headerStyle: CSSProperties = isLanding
+    ? {
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 60,
+        background: "linear-gradient(180deg, rgba(5,5,5,.68) 0%, rgba(5,5,5,.28) 58%, rgba(5,5,5,0) 100%)",
+        borderBottom: "none",
+      }
+    : {
+        position: "sticky",
+        top: 0,
+        zIndex: 60,
+        background: "rgba(5,5,5,.78)",
+        backdropFilter: "blur(16px)",
+        borderBottom: "1px solid var(--line)",
+      };
+  const navStyle: CSSProperties = {
+    display: "grid",
+    gridTemplateColumns: "1fr auto 1fr",
+    alignItems: "center",
+    height: isLanding ? 76 : 64,
+    gap: 12,
+  };
+  const navPillStyle: CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: 2,
+    justifySelf: "center",
+    background: isLanding ? "rgba(10,12,11,.46)" : "var(--surface)",
+    border: "1px solid rgba(20,241,149,.22)",
+    borderRadius: 99,
+    padding: 4,
+    boxShadow: isLanding ? "0 18px 60px rgba(0,0,0,.32), 0 0 34px rgba(20,241,149,.08)" : "0 0 26px rgba(20,241,149,.08)",
+    backdropFilter: "blur(18px)",
+  };
+  const searchButtonStyle: CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: 9,
+    padding: "8px 14px",
+    borderRadius: 99,
+    background: isLanding ? "rgba(10,12,11,.46)" : "var(--surface)",
+    border: isLanding ? "1px solid rgba(255,255,255,.12)" : "1px solid var(--line)",
+    color: "var(--text-dim)",
+    fontSize: 13,
+    boxShadow: isLanding ? "0 18px 50px rgba(0,0,0,.26)" : "none",
+    backdropFilter: "blur(18px)",
+  };
 
   return (
     <div style={{ minHeight: "100vh", position: "relative" }}>
       {/* NAV */}
-      <header style={{ position: "sticky", top: 0, zIndex: 60, background: "rgba(5,5,5,.78)", backdropFilter: "blur(16px)", borderBottom: "1px solid var(--line)" }}>
-        <nav className={wide ? "shell-wide" : "shell"} style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", height: 64, gap: 12 }}>
+      <header style={headerStyle}>
+        <nav className={wide ? "shell-wide" : "shell"} style={navStyle}>
           {/* left: brand */}
           <Link to="/" aria-label="SolRef home" style={{ justifySelf: "start" }}><Wordmark /></Link>
 
           {/* center: nav links (truly centered) */}
-          <div className="nav-desktop" style={{ display: "flex", alignItems: "center", gap: 2, justifySelf: "center", background: "var(--surface)", border: "1px solid rgba(20,241,149,.2)", borderRadius: 99, padding: 4, boxShadow: "0 0 26px rgba(20,241,149,.08)" }}>
+          <div className="nav-desktop" style={navPillStyle}>
             {NAV.map((n) => (
               <Link key={n.to} to={n.to}
                 style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".08em", padding: "7px 14px", borderRadius: 99, color: isActive(n.to) ? "#03130c" : "var(--text-mid)", background: isActive(n.to) ? "var(--neon-green)" : "transparent", boxShadow: isActive(n.to) ? "0 0 24px var(--neon-green-soft)" : "none", transition: "all .18s" }}>
@@ -109,8 +160,7 @@ export default function Layout({ children, wide }: { children: ReactNode; wide?:
 
           {/* right: search */}
           <div style={{ display: "flex", alignItems: "center", gap: 10, justifySelf: "end" }}>
-            <button onClick={() => setSearchOpen(true)} className="nav-desktop"
-              style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 14px", borderRadius: 99, background: "var(--surface)", border: "1px solid var(--line)", color: "var(--text-dim)", fontSize: 13 }}>
+            <button onClick={() => setSearchOpen(true)} className="nav-desktop" style={searchButtonStyle}>
               <Search size={14} /> Search
               <kbd style={{ display: "inline-flex", alignItems: "center", gap: 2 }}><Command size={10} />K</kbd>
             </button>
@@ -121,7 +171,7 @@ export default function Layout({ children, wide }: { children: ReactNode; wide?:
         </nav>
 
         {menuOpen && (
-          <div className="nav-mobile" style={{ display: "none", flexDirection: "column", padding: "12px 28px 18px", borderTop: "1px solid var(--line)", background: "var(--bg-2)" }}>
+          <div className="nav-mobile" style={{ display: "none", flexDirection: "column", padding: "12px 28px 18px", borderTop: isLanding ? "1px solid rgba(20,241,149,.18)" : "1px solid var(--line)", background: isLanding ? "rgba(5,5,5,.88)" : "var(--bg-2)", backdropFilter: "blur(18px)" }}>
             {NAV.map((n) => (
               <Link key={n.to} to={n.to} style={{ padding: "11px 0", fontSize: 15, color: isActive(n.to) ? "var(--text)" : "var(--text-mid)" }}>{n.label}</Link>
             ))}
