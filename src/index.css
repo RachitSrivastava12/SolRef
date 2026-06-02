@@ -1,0 +1,136 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* QuickNode-inspired: black, white, neon green, dark grey */
+    --background: 0 0% 5%;
+    --foreground: 0 0% 96%;
+
+    --card: 0 0% 9%;
+    --card-foreground: 0 0% 96%;
+
+    --popover: 0 0% 9%;
+    --popover-foreground: 0 0% 96%;
+
+    --primary: 40 8% 91%;
+    --primary-foreground: 0 0% 5%;
+
+    --secondary: 0 0% 13%;
+    --secondary-foreground: 0 0% 96%;
+
+    --muted: 0 0% 13%;
+    --muted-foreground: 0 0% 55%;
+
+    --accent: 145 100% 50%;
+    --accent-foreground: 0 0% 5%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 96%;
+
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 145 100% 50%;
+
+    --radius: 0.375rem;
+
+    /* Custom tokens */
+    --green: 40 8% 91%;
+    --grey-dark: 0 0% 9%;
+    --grey-mid: 0 0% 15%;
+    --grey-light: 0 0% 55%;
+
+    --gradient-hero: linear-gradient(180deg, hsl(0 0% 5%) 0%, hsl(0 0% 3%) 100%);
+    --gradient-card: linear-gradient(135deg, hsl(0 0% 11%) 0%, hsl(0 0% 8%) 100%);
+    --gradient-green-glow: radial-gradient(ellipse at center, hsl(0 0% 100% / 0.06) 0%, transparent 70%);
+    --shadow-green: 0 0 20px hsl(0 0% 100% / 0.12);
+    --shadow-card: 0 4px 24px hsl(0 0% 0% / 0.4);
+
+    --sidebar-background: 0 0% 7%;
+    --sidebar-foreground: 0 0% 96%;
+    --sidebar-primary: 40 8% 91%;
+    --sidebar-primary-foreground: 0 0% 5%;
+    --sidebar-accent: 0 0% 13%;
+    --sidebar-accent-foreground: 0 0% 96%;
+    --sidebar-border: 0 0% 15%;
+    --sidebar-ring: 145 100% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+  }
+  code, pre, .mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+@layer utilities {
+
+  /* Solana float animation */
+@keyframes solana-float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-14px); }
+  100% { transform: translateY(0px); }
+}
+
+.solana-float {
+  animation: solana-float 5s ease-in-out infinite;
+}
+
+/* Gradient shimmer animation */
+@keyframes solana-shift {
+  0% { stop-color: #f2f1ee; }
+  50% { stop-color: #b6b5b1; }
+  100% { stop-color: #f2f1ee; }
+}
+
+  .dot-grid {
+    background-image: radial-gradient(circle, hsl(0 0% 25% / 0.4) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  .green-glow {
+    box-shadow: var(--shadow-green);
+  }
+  .text-green {
+    color: hsl(var(--green));
+  }
+  .bg-green {
+    background-color: hsl(var(--green));
+  }
+  .border-green {
+    border-color: hsl(var(--green));
+  }
+  .green-label {
+    background-color: hsl(var(--green));
+    color: hsl(0 0% 5%);
+    font-weight: 700;
+    padding: 2px 10px;
+  }
+  .card-hover {
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  }
+  .card-hover:hover {
+    border-color: hsl(var(--green) / 0.5);
+    box-shadow: 0 0 24px hsl(var(--green) / 0.1);
+    transform: translateY(-2px);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}

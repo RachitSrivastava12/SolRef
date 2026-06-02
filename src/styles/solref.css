@@ -1,0 +1,126 @@
+/* ════════════════════════════════════════════════════════════════════════
+   SolRef design system — black / white / grey with a neon green accent.
+   Typeface: Source Sans 3 throughout.
+   ════════════════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg: #050505;
+  --bg-2: #0a0a0b;
+  --surface: #0f0f10;
+  --surface-2: #161617;
+  --surface-3: #1e1e20;
+  --line: #242426;
+  --line-2: #323235;
+
+  --text: #f2f1ee;
+  --text-mid: #b6b5b1;
+  --text-dim: #7c7b78;
+
+  /* brand vars kept by NAME, remapped to MONO so pages need no rewrite */
+  --metal: #e9e7e1;
+  --metal-dim: #b6b5b1;
+  --sol-purple: #cfcdc7;
+  --sol-blue: #a3a29d;
+  --sol-magenta: #cfcdc7;
+  --sol-red: #d98a8a;
+  --sol-yellow: #cbbf8e;
+  --neon-green: #14f195;
+  --neon-green-soft: rgba(20,241,149,.2);
+  --neon-green-glow: rgba(20,241,149,.46);
+
+  --sol-green: #14f195;
+  --ok: #14f195;
+
+  --grad: linear-gradient(135deg, #14f195 0%, #f2f1ee 38%, #b6b5b1 100%);
+  --grad-soft: linear-gradient(135deg, rgba(20,241,149,.12), rgba(255,255,255,.025));
+
+  --font-display: 'Source Sans 3', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --r-sm: 10px; --r-md: 14px; --r-lg: 18px; --r-xl: 26px;
+  --maxw: 1200px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-display);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.55;
+  overflow-x: hidden;
+  background-image: radial-gradient(ellipse 120% 80% at 50% -10%, #141416 0%, #050505 60%);
+  background-attachment: fixed;
+}
+
+::selection { background: rgba(255,255,255,.16); color: #fff; }
+
+::-webkit-scrollbar { width: 11px; height: 11px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 99px; border: 3px solid var(--bg); }
+::-webkit-scrollbar-thumb:hover { background: #45454a; }
+
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; }
+.mono { font-family: var(--font-mono); }
+
+.shell { max-width: var(--maxw); margin: 0 auto; padding: 0 28px; }
+.shell-wide { max-width: 1360px; margin: 0 auto; padding: 0 28px; }
+
+.grad-text {
+  background: var(--grad);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+.grad-border { position: relative; background: var(--surface); border: 1px solid var(--line); }
+.grad-border::before {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px;
+  background: linear-gradient(135deg, rgba(255,255,255,.22), rgba(255,255,255,0) 50%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  pointer-events: none;
+}
+
+.eyebrow {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: .24em;
+  text-transform: uppercase; color: var(--text-dim); font-weight: 600;
+}
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); transition: border-color .25s, transform .25s, background .25s; }
+.card:hover { border-color: var(--line-2); }
+.card-lift:hover { transform: translateY(-3px); border-color: #3a3a3e; background: var(--surface-2); }
+
+.btn { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; border-radius: var(--r-sm); padding: 12px 22px; border: none; transition: all .2s; white-space: nowrap; }
+.btn-grad { background: var(--text); color: #060606; }
+.btn-grad:hover { background: #fff; transform: translateY(-1px); }
+.btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--line-2); }
+.btn-ghost:hover { border-color: var(--text-mid); }
+.btn-surface { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); }
+.btn-surface:hover { background: var(--surface-3); border-color: var(--line-2); }
+
+kbd { font-family: var(--font-mono); font-size: 10px; background: var(--surface-3); border: 1px solid var(--line-2); border-radius: 5px; padding: 2px 6px; color: var(--text-mid); }
+
+.pill { font-family: var(--font-mono); font-size: 11px; padding: 4px 11px; border-radius: 99px; border: 1px solid var(--line-2); color: var(--text-dim); background: transparent; transition: all .2s; white-space: nowrap; }
+.pill.on { background: var(--text); color: #060606; border-color: transparent; font-weight: 600; }
+
+.aurora { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.aurora::before { content: ''; position: absolute; width: 700px; height: 700px; border-radius: 50%; filter: blur(130px); opacity: .06; background: #ffffff; top: -260px; left: 50%; transform: translateX(-50%); }
+
+.grid-bg { background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: 56px 56px; -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%); mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%); opacity: .5; }
+
+@keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scaleIn { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+.reveal { animation: fadeUp .6s cubic-bezier(.2,.7,.3,1) both; }
+
+pre { font-family: var(--font-mono); white-space: pre; overflow-x: auto; font-size: 12.5px; line-height: 1.65; }
+
+.prose p { color: var(--text-mid); margin-bottom: 1rem; line-height: 1.7; }
+.prose h2 { font-size: 26px; font-weight: 700; margin: 2.2rem 0 1rem; }
+.prose h3 { font-size: 18px; font-weight: 600; margin: 1.6rem 0 .7rem; color: var(--text); }
+.prose code { font-family: var(--font-mono); font-size: 13px; background: var(--surface-2); padding: 2px 6px; border-radius: 5px; color: var(--text); }
