@@ -1,1 +1,1 @@
-everything u need to understand solana infra :)
+everything u need to understand solana infra baby :)
