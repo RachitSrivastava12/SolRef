@@ -102,7 +102,7 @@ export default function Workspace() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap", marginBottom: 20 }}>
           <div>
             <div className="eyebrow">Workspace</div>
-            <h1 style={{ fontSize: 30, fontWeight: 800, marginTop: 6, letterSpacing: "-.02em" }}>
+            <h1 style={{ fontSize: 30, fontWeight: 800, marginTop: 6, letterSpacing: 0 }}>
               {task ? task.title : "Practice, get hints, get evaluated"}
             </h1>
           </div>
@@ -164,10 +164,10 @@ export default function Workspace() {
                   m.editor.defineTheme("solref-dark", {
                     base: "vs-dark", inherit: true, rules: [],
                     colors: {
-                      "editor.background": "#0a0a0b", "editor.foreground": "#f2f1ee",
-                      "editorLineNumber.foreground": "#3a3a3d", "editorLineNumber.activeForeground": "#e9e7e1",
-                      "editor.selectionBackground": "#ffffff22", "editor.lineHighlightBackground": "#161617",
-                      "editorCursor.foreground": "#e9e7e1", "editorIndentGuide.background1": "#242426",
+                      "editor.background": "#000000", "editor.foreground": "#f7f7f6",
+                      "editorLineNumber.foreground": "#3f423f", "editorLineNumber.activeForeground": "#f7f7f6",
+                      "editor.selectionBackground": "#14f19522", "editor.lineHighlightBackground": "#090909",
+                      "editorCursor.foreground": "#14f195", "editorIndentGuide.background1": "#1a1a1a",
                     },
                   });
                   m.languages.typescript.typescriptDefaults.setDiagnosticsOptions({ noSemanticValidation: true, noSyntaxValidation: false });

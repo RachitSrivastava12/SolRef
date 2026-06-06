@@ -36,22 +36,21 @@ export default function SandwichSim() {
 
   return (
     <Layout>
-      <div className="aurora" />
       <div className="shell" style={{ position: "relative", zIndex: 1, paddingTop: 56, maxWidth: 860 }}>
-        <div className="eyebrow reveal">Network dynamics · interactive</div>
-        <h1 className="reveal" style={{ fontSize: 42, fontWeight: 800, margin: "10px 0 12px", letterSpacing: "-.025em", animationDelay: ".05s" }}>
-          The <span className="grad-text">sandwich attack</span>, simulated
-        </h1>
-        <p className="reveal" style={{ fontSize: 17, color: "var(--text-mid)", maxWidth: 640, marginBottom: 36, animationDelay: ".1s" }}>
-          A bot buys right before your swap and sells right after — pocketing the price impact. Watch how tightening your slippage tolerance shuts it down.
-        </p>
+        <div className="page-heading">
+          <div className="eyebrow reveal">Network dynamics · interactive</div>
+          <h1 className="page-title reveal" style={{ animationDelay: ".05s" }}>Sandwich simulator.</h1>
+          <p className="page-subtitle reveal" style={{ animationDelay: ".1s" }}>
+            A bot buys before your swap and sells after it. Tighten slippage and watch the bundle fail.
+          </p>
+        </div>
 
         {/* THE SANDWICH */}
         <div className="card" style={{ padding: 28, marginBottom: 24 }}>
           <div style={{ display: "flex", gap: 12, alignItems: "stretch", marginBottom: 8 }}>
-            <Tx label="① Front-run" color="var(--sol-purple)" sub="Bot buys before you, pushing price up" />
+            <Tx label="① Front-run" color="var(--text-mid)" sub="Bot buys before you, pushing price up" />
             <Tx label="② Your swap" color={sim.protected_ ? "var(--sol-green)" : "var(--sol-yellow)"} sub={sim.protected_ ? "Reverts — slippage exceeded" : "Fills at a worse price"} />
-            <Tx label="③ Back-run" color="var(--sol-purple)" sub="Bot sells into your impact" />
+            <Tx label="③ Back-run" color="var(--text-mid)" sub="Bot sells into your impact" />
           </div>
           <div className="mono" style={{ textAlign: "center", fontSize: 11, color: "var(--text-dim)", marginTop: 10 }}>all three land in one atomic Jito bundle — same slot, same order</div>
         </div>
@@ -69,9 +68,9 @@ export default function SandwichSim() {
           <div className="card" style={{ padding: 22 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
               <span style={{ fontSize: 14, fontWeight: 600 }}>Attacker size</span>
-              <span className="mono" style={{ fontSize: 14, color: "var(--sol-purple)" }}>{attackerSize}</span>
+              <span className="mono" style={{ fontSize: 14, color: "var(--text)" }}>{attackerSize}</span>
             </div>
-            <input type="range" min={10} max={300} step={10} value={attackerSize} onChange={(e) => setAttackerSize(+e.target.value)} style={{ width: "100%", accentColor: "var(--sol-purple)" }} />
+            <input type="range" min={10} max={300} step={10} value={attackerSize} onChange={(e) => setAttackerSize(+e.target.value)} style={{ width: "100%", accentColor: "var(--text-mid)" }} />
             <div className="mono" style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 8 }}>bigger front-run = more price impact to harvest</div>
           </div>
         </div>

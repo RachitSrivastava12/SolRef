@@ -31,7 +31,7 @@ export function Wordmark() {
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 9 }}>
       <SolanaMark size={24} />
-      <span style={{ fontWeight: 800, fontSize: 17, letterSpacing: "-.01em" }}>SolRef</span>
+      <span style={{ fontWeight: 800, fontSize: 17, letterSpacing: 0 }}>SolRef</span>
     </span>
   );
 }

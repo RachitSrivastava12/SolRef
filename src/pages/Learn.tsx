@@ -11,16 +11,13 @@ export default function Learn() {
 
   return (
     <Layout>
-      <div className="aurora" />
       <div className="shell" style={{ position: "relative", zIndex: 1, paddingTop: 56 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 20, flexWrap: "wrap", marginBottom: 36 }}>
-          <div>
+          <div className="page-heading" style={{ marginBottom: 0 }}>
             <div className="eyebrow reveal">Guided path</div>
-            <h1 className="reveal" style={{ fontSize: 42, fontWeight: 800, margin: "10px 0 10px", letterSpacing: "-.025em", animationDelay: ".05s" }}>
-              Learn Solana <span className="grad-text">in order</span>
-            </h1>
-            <p className="reveal" style={{ fontSize: 17, color: "var(--text-mid)", maxWidth: 540, animationDelay: ".1s" }}>
-              Work the track top to bottom. Pass a concept's quiz at 70%+ and it locks in as mastered.
+            <h1 className="page-title reveal" style={{ animationDelay: ".05s" }}>Learning path.</h1>
+            <p className="page-subtitle reveal" style={{ animationDelay: ".1s" }}>
+              Work top to bottom. Pass a concept quiz at 70%+ and it locks in as mastered.
             </p>
           </div>
           <div className="card reveal" style={{ padding: 20, minWidth: 240, animationDelay: ".15s" }}>
@@ -33,7 +30,7 @@ export default function Learn() {
               <span style={{ color: "var(--sol-green)" }}>{pct}%</span>
             </div>
             <div style={{ height: 8, borderRadius: 99, background: "var(--surface-2)", overflow: "hidden" }}>
-              <div style={{ height: "100%", width: `${pct}%`, background: "var(--grad)", transition: "width .5s" }} />
+              <div style={{ height: "100%", width: `${pct}%`, background: "var(--neon-green)", transition: "width .35s var(--ease-out)" }} />
             </div>
           </div>
         </div>

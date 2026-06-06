@@ -1,9 +1,7 @@
 import {
   ArrowRight, Zap, Box, Layers, GitBranch, Shield, Activity, Clock,
-  Database, Network, ChevronRight, X, ExternalLink, Copy, Check,
-  Cpu, Globe, Lock, Server, Code2, Flame, BarChart3, HardDrive,
-  RefreshCw, Wifi, Eye, ChevronDown, BookOpen, Terminal, Hash,
-  AlertTriangle, Info, Lightbulb, CheckCircle,
+  Database, Network, Cpu, Globe, Lock, Server, Code2, Flame, BarChart3,
+  HardDrive, RefreshCw, Wifi, Eye, BookOpen, Terminal, Hash,
 } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -30,7 +28,7 @@ export interface Concept {
   code: string; links?: { label: string; url: string }[];
 }
 
-export const categories = ["All", "Core Infra", "Data Flow", "MEV", "System Design", "Consensus", "Programs", "Economics"];
+export const categories = ["All", "Frontier", "Core Infra", "Consensus", "Networking", "Data Flow", "Programs", "System Design", "MEV", "Economics"];
 
 export const concepts: Concept[] = [
   {
@@ -43,7 +41,7 @@ export const concepts: Concept[] = [
       "Recent blockhash expires in ~150 slots (~60s)",
       "Fee paid in lamports (1 SOL = 10⁹ lamports)",
       "Versioned (v0) & legacy formats supported",
-      "Up to 64 unique accounts per legacy tx",
+      "Legacy tx fits ~35 accounts; v0 + ALTs reach 256",
       "Ed25519 or Secp256k1 signature verification",
       "Multi-sig: multiple signers on one tx",
       "Atomic: all-or-nothing execution guarantee"
@@ -134,7 +132,7 @@ if (serialized.length > 1232) throw new Error("Tx too large!");`,
       "~2.5 slots created per second on average",
       "Leader schedule is rotated every epoch",
       "Skipped slots ≠ lost data — tx just wasn't included",
-      "~800ms actual average block time in practice",
+      "~400–460ms actual average block time on mainnet",
       "Block header includes parent slot hash",
       "Slot = position in the chain; Block = data at that slot",
       "Slot number is the primary time reference on Solana"
@@ -807,7 +805,7 @@ async function getCompetitiveTip(connection: Connection): Promise<number> {
       "setComputeUnitPrice: microlamports per compute unit",
       "setComputeUnitLimit: max CUs this tx can use",
       "Base fee = 5000 lamports per signature (flat)",
-      "Priority fee = microLamports × actualCUsUsed / 1,000,000",
+      "Priority fee = microLamports × requested CU limit / 1,000,000",
       "Leader orders txs by fee-per-CU (highest first)",
       "Simulate first to get exact CU usage, add 10% buffer",
       "getRecentPrioritizationFees for market rate data"
@@ -2234,6 +2232,852 @@ async function findBestValidators() {
       { label: "Top Validators", url: "https://topvalidators.app/" },
     ],
   },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  FRONTIER — the 2024-2025 breakthroughs reshaping Solana's architecture
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    icon: "Zap",
+    tag: "Frontier",
+    title: "Alpenglow Consensus",
+    desc: "Alpenglow is the largest change to Solana's core protocol ever shipped — it retires Tower BFT and on-chain PoH voting and replaces them with two components: Votor (a BLS-signature voting protocol) and Rotor (a single-hop, stake-weighted data dissemination layer that supersedes Turbine). The result is finality measured in ~100-150ms instead of ~12.8 seconds. Approved by 98.27% of voting stake in September 2025.",
+    details: [
+      "Votor: validators sign vote certificates with BLS and aggregate them OFF-chain",
+      "No more vote transactions — kills the #1 source of ledger bloat and ~3M daily vote txs",
+      "One round of voting if ≥80% stake responds → finality in ~100ms",
+      "Two rounds if 60-80% stake responds → worst-case ~150-250ms finality",
+      "Rotor replaces Turbine's multi-hop tree with a flatter single-relay-layer broadcast",
+      "'20+20' resilience: tolerates 20% Byzantine + 20% offline stake simultaneously",
+      "Removes PoH from the critical voting path (PoH stays as a clock/ordering tool)",
+      "Targeted for mainnet rollout through 2026 after testnet hardening",
+    ],
+    whyItMatters: "Sub-150ms finality changes what you can build. Today apps wait ~1-2s for 'confirmed' and ~13s for 'finalized'; with Alpenglow, finalized settlement is faster than most web requests — payments, order books, and games can treat the chain as a low-latency backend. Removing vote transactions also frees a huge fraction of block space and bandwidth for real user activity, and shrinks ledger growth dramatically. If you architect around commitment levels, Alpenglow will collapse the gap between 'confirmed' and 'finalized' to near-zero.",
+    commonMistakes: [
+      "Thinking Alpenglow deletes Proof of History — PoH remains as an ordering clock, just not in the voting hot path",
+      "Assuming it's live on mainnet today — it passed governance but ships progressively via testnet first",
+      "Confusing finality latency (~150ms) with block time (~400ms, also dropping over time)",
+      "Believing faster finality means higher TPS — Alpenglow targets latency; throughput comes from Firedancer + block-limit raises",
+    ],
+    code: `// Alpenglow is a validator-level protocol change — there is no app SDK call.
+// But your client-side commitment logic is what benefits. Today:
+import { Connection } from "@solana/web3.js";
+const conn = new Connection("https://api.mainnet-beta.solana.com");
+
+// Pre-Alpenglow you trade safety for latency by choosing a commitment:
+//   processed  ~0.4s   (can be dropped)
+//   confirmed  ~1-2s   (2/3 stake voted)
+//   finalized  ~13s    (32-deep rooted, irreversible)
+const sig = "...";
+await conn.confirmTransaction(sig, "finalized"); // slow today
+
+// Post-Alpenglow, "finalized" returns in ~100-150ms because Votor
+// finalizes in one or two BLS-aggregated rounds instead of 32 slots.
+// Forward-looking apps should already prefer "confirmed" for UX and
+// reserve "finalized" for settlement — that code path gets ~80x faster
+// for free once the upgrade activates, with no client changes needed.
+
+// What disappears: validators no longer pay for vote transactions.
+// Vote cost (~1 SOL/day/validator) and ledger bloat both collapse.`,
+    links: [
+      { label: "Alpenglow Whitepaper (Anza)", url: "https://www.anza.xyz/blog/alpenglow-a-new-consensus-for-solana" },
+      { label: "QuickNode — Alpenglow explained", url: "https://blog.quicknode.com/solana-alpenglow-upgrade/" },
+    ],
+  },
+  {
+    icon: "Flame",
+    tag: "Frontier",
+    title: "Firedancer & Validator Clients",
+    desc: "Firedancer is a ground-up validator client written in C by Jump Crypto — independent from the original Rust codebase (Agave, maintained by Anza). Client diversity means no single bug can halt the chain. Firedancer rebuilds the networking, runtime, and consensus stack for raw speed, demonstrating 600k+ TPS in lab conditions and targeting the path to 1M TPS.",
+    details: [
+      "Agave (Rust): the reference client, formerly 'solana-labs', now maintained by Anza",
+      "Frankendancer: hybrid — Firedancer's networking + Agave's runtime/consensus (live since Sep 2024)",
+      "Full Firedancer: pure C client — started voting mainnet Jul 2025, producing full blocks Oct 2025",
+      "Client diversity removes a single-point-of-failure: a bug in one client can't stop the network",
+      "Kernel-bypass networking (AF_XDP), tile-based architecture, hand-tuned for line-rate",
+      "As of late 2025 Frankendancer ran ~20% of staked SOL",
+      "Other clients exist/are emerging (e.g. Sig by Syndica, a Zig read-path client)",
+      "Same protocol, different implementations — they must agree bit-for-bit on state",
+    ],
+    whyItMatters: "Solana famously halted in its early years partly because it had one client implementation. A second, independently-written client means a consensus-breaking bug in Agave doesn't take down the chain if Firedancer disagrees — and vice versa. For builders, Firedancer raises the performance ceiling: higher block limits and lower latency are only safe when validators can actually keep up with them. The drive toward 1M TPS and tighter slot times is gated on client performance, and Firedancer is the engine for it.",
+    commonMistakes: [
+      "Thinking Firedancer is a new blockchain or token — it's a validator client for the same Solana network",
+      "Assuming full Firedancer is widely deployed — Jump advises waiting for audits before large-stake migration",
+      "Confusing Frankendancer (hybrid) with full Firedancer (pure C, all stages rewritten)",
+      "Believing more clients fragments the network — they all run identical consensus rules",
+    ],
+    code: `// You don't call Firedancer from an app — it's the software validators run.
+// But you CAN see client diversity on-chain via the cluster's node versions:
+import { Connection } from "@solana/web3.js";
+const conn = new Connection("https://api.mainnet-beta.solana.com");
+
+const nodes = await conn.getClusterNodes();
+console.log("Total gossip nodes:", nodes.length);
+
+// Group by reported version string (Firedancer reports a distinct version)
+const byVersion: Record<string, number> = {};
+for (const n of nodes) {
+  const v = n.version ?? "unknown";
+  byVersion[v] = (byVersion[v] ?? 0) + 1;
+}
+console.table(byVersion);
+
+// Validator operators choose a client in their startup command, e.g.:
+//   agave-validator      ...   (Rust / Anza)
+//   fdctl  configure / run ...  (Firedancer / Jump)
+// The network only stays healthy if no single client holds >33% of stake.`,
+    links: [
+      { label: "Firedancer (GitHub)", url: "https://github.com/firedancer-io/firedancer" },
+      { label: "Blockdaemon — Firedancer deep dive", url: "https://www.blockdaemon.com/blog/solanas-firedancer-validator-client-deep-dive" },
+    ],
+  },
+  {
+    icon: "Globe",
+    tag: "Frontier",
+    title: "DoubleZero",
+    desc: "DoubleZero is a dedicated physical fiber network for blockchain validators — a 'Network Layer 1' (N1) that bypasses the public internet for consensus traffic. Validators connect through contributed dark-fiber links and FPGA filtering hardware, cutting propagation latency by up to ~50% and using multicast so a leader broadcasts a block to all validators at once instead of relaying hop-by-hop.",
+    details: [
+      "Two concentric rings: an outer public-facing ring filters/dedups, an inner ring carries clean consensus traffic",
+      "FPGAs do signature verification + deduplication at line rate (100+ Gbps)",
+      "Multicast: one-to-many broadcast replaces sequential per-validator forwarding",
+      "150+ high-performance fiber links across dozens of global sites",
+      "Mainnet-beta went live late 2025 with ~22% of staked SOL connected",
+      "Powered by the 2Z SPL token, which rewards bandwidth/link contributors",
+      "Latency cuts directly shrink the time budget for block propagation and voting",
+      "Complements Alpenglow's Rotor — faster pipes make faster finality realistic",
+    ],
+    whyItMatters: "Solana's performance is ultimately bounded by physics: how fast can a block reach 2/3 of stake across the planet. The public internet routes packets through congested, adversarial paths. DoubleZero gives consensus its own road — lower latency, less jitter, and hardware-level filtering of spam before it ever touches a validator's CPU. Combined with Alpenglow and Firedancer, it's the third leg of the 2025 push to make finality faster and block production more reliable under load.",
+    commonMistakes: [
+      "Thinking DoubleZero is a Solana-only product — it's a general 'internet layer' for distributed systems",
+      "Assuming it replaces the public internet for users — it's for validator-to-validator consensus traffic",
+      "Confusing the 2Z token with SOL — 2Z incentivizes physical network contributors",
+      "Believing it's mandatory — it's opt-in infra that validators choose to connect through",
+    ],
+    code: `// DoubleZero is infrastructure validators connect to at the network layer;
+// there's no application API. Conceptually it changes the propagation path:
+//
+//   Public internet (today):
+//     leader → ISP → IXP → ISP → validator   (variable latency, jitter, spam)
+//
+//   DoubleZero inner ring:
+//     leader → [FPGA filter] → multicast → ALL validators simultaneously
+//
+// Operators run a doublezero client/tunnel alongside their validator and
+// announce their inner-ring address. Consensus shreds + votes travel the
+// private fiber; the public ring still handles untrusted ingress (user txs).
+//
+// For app builders the takeaway is indirect but real: lower, more predictable
+// propagation latency tightens the window between "sent" and "confirmed",
+// which is the latency users actually feel.`,
+    links: [
+      { label: "DoubleZero — Figment first look", url: "https://www.figment.io/insights/doublezero-first-look-the-internet-layer-for-solana-and-beyond/" },
+      { label: "Kiln — the internet layer for validators", url: "https://www.kiln.fi/post/doublezero-on-solana-a-dive-into-the-internet-layer-for-validators" },
+    ],
+  },
+  {
+    icon: "Activity",
+    tag: "Frontier",
+    title: "Async Execution & Rising Block Limits",
+    desc: "Solana's throughput roadmap is a steady raising of per-block compute limits plus a re-architecture that decouples block production from execution. SIMD-0256 lifted the block limit from 50M to 60M compute units in 2025; SIMD-0286 proposes 100M. Asynchronous Program Execution (APE) separates 'agreeing on transaction order' from 'computing the resulting state', so leaders can pack blocks faster than nodes execute them.",
+    details: [
+      "Per-block limit history: 48M → 50M → 60M (SIMD-0256, Jul 2025) → 100M proposed (SIMD-0286)",
+      "Limits gate parallelizable, non-vote work: DeFi swaps, mints, DePIN bursts",
+      "Per-account write limit (~12M CU) prevents one hot account from eating the block",
+      "Async execution: consensus orders txs first; state computation follows, off the critical path",
+      "Decoupling lets block production scale with bandwidth, not single-thread execution speed",
+      "Higher limits are only safe once clients (Firedancer/Agave) can replay them in time",
+      "Multiple concurrent leaders (MCL) is a related research direction for parallel block production",
+      "Raises are governed by SIMDs and activated by validator supermajority",
+    ],
+    whyItMatters: "Block limits are the real ceiling most builders hit before TPS — during a hot mint or liquidation cascade, blocks fill and your transaction gets dropped or repriced. Every limit raise is more room for parallel app activity. Async execution is the deeper unlock: today a node must execute a block before it can vote, so execution speed bounds the whole pipeline. Separating ordering from execution means the network can ingest and order far more than any single core can compute synchronously — the architectural path to 1M+ TPS.",
+    commonMistakes: [
+      "Optimizing for raw TPS when your real constraint is the per-account write limit on a hot account",
+      "Assuming block-limit raises are free — they raise hardware requirements for every validator",
+      "Thinking async execution weakens safety — ordering is still consensus-final; only state computation moves off the hot path",
+      "Ignoring compute budgeting because 'blocks are bigger now' — you still pay per CU and compete for space",
+    ],
+    code: `import { ComputeBudgetProgram, Transaction } from "@solana/web3.js";
+
+// Bigger block limits don't remove YOUR per-tx compute cap — set it explicitly.
+const tx = new Transaction().add(
+  // Request exactly what you need (default cap is 200k CU/tx, max 1.4M)
+  ComputeBudgetProgram.setComputeUnitLimit({ units: 300_000 }),
+  // Bid for inclusion: priority fee = price-per-CU × units (micro-lamports)
+  ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 50_000 }),
+  // ...your real instructions here
+);
+
+// Why it matters even with 60M/100M block limits:
+//   - The block is shared; a popular slot still fills up.
+//   - Touching a hot account counts against the ~12M per-account write cap.
+//   - Right-sizing the CU limit = cheaper fees AND better landing odds,
+//     because the scheduler packs tight, well-estimated txs first.`,
+    links: [
+      { label: "SIMD-0256 — raise block limits to 60M", url: "https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0256-raise-block-limits-to-60M.md" },
+      { label: "SIMD-0286 — raise block limits to 100M", url: "https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0286-raise-block-limits-to-100M.md" },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  NETWORKING — how packets actually move
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    icon: "Wifi",
+    tag: "Networking",
+    title: "QUIC & Stake-Weighted QoS",
+    desc: "Solana validators ingest transactions over QUIC (the UDP-based protocol behind HTTP/3), not plain UDP or TCP. QUIC adds connection identity, flow control, and back-pressure so a leader can throttle abusive senders. Stake-Weighted Quality of Service (SWQoS) layers on top: connections from high-stake validators get a guaranteed share of the leader's ingest capacity, so spam from anonymous senders can't crowd out real traffic.",
+    details: [
+      "QUIC replaced raw UDP ingest in 2022 to stop the 'fire a million packets' spam vector",
+      "Connections are rate-limited per source IP and per identity",
+      "SWQoS reserves up to ~80% of leader ingest for stake-weighted peers, ~20% for unstaked",
+      "An RPC with stake (or partnered with a staked validator) lands transactions more reliably",
+      "This is why premium RPC/sender services advertise 'staked connections'",
+      "Back-pressure: the leader can signal senders to slow down instead of silently dropping",
+      "Helps during congestion — your tx competes for a reserved lane, not the open flood",
+      "Transactions still must also win on priority fee to be included once ingested",
+    ],
+    whyItMatters: "During congestion, the bottleneck isn't just block space — it's whether your transaction even reaches the leader. With plain UDP, anyone could drown the ingest port. QUIC + SWQoS turns ingest into a metered, identity-aware pipe where stake buys reliability. This is the hidden reason a transaction sent through a high-quality staked sender lands when the same tx via a public RPC silently disappears. If you run a latency-sensitive app, understanding SWQoS explains why you pay for a premium sender.",
+    commonMistakes: [
+      "Blaming 'low TPS' when your real problem is ingest contention via an unstaked RPC",
+      "Assuming a higher priority fee alone guarantees landing — it has to reach the leader first",
+      "Thinking QUIC adds meaningful latency — the handshake is amortized over the connection",
+      "Ignoring SWQoS when choosing an RPC provider for high-frequency sending",
+    ],
+    code: `// You don't speak QUIC directly — your RPC's sender does. But the choice of
+// sender determines whether you ride a stake-weighted lane. Practical pattern:
+import { Connection, VersionedTransaction } from "@solana/web3.js";
+
+// A premium/staked sender endpoint vs a public one changes landing rates,
+// especially under load. Same tx, different ingest priority.
+const stakedSender = new Connection(process.env.STAKED_RPC_URL!, "confirmed");
+
+async function sendReliably(tx: VersionedTransaction) {
+  const raw = tx.serialize();
+  // Re-broadcast a few times; senders forward to current + upcoming leaders.
+  for (let i = 0; i < 5; i++) {
+    await stakedSender.sendRawTransaction(raw, {
+      skipPreflight: true,        // already simulated; save round-trips
+      maxRetries: 0,              // we control retry cadence ourselves
+    });
+    await new Promise((r) => setTimeout(r, 400)); // ~1 slot between tries
+  }
+}
+// The staked connection is what gives these packets a reserved ingest lane.`,
+    links: [
+      { label: "Helius — Stake-Weighted QoS", url: "https://www.helius.dev/blog/stake-weighted-quality-of-service-everything-you-need-to-know" },
+      { label: "Anza — QUIC & transaction ingest", url: "https://www.anza.xyz/blog" },
+    ],
+  },
+  {
+    icon: "RefreshCw",
+    tag: "Networking",
+    title: "Gossip & Repair",
+    desc: "Gossip is Solana's peer-discovery and metadata protocol — a constantly-churning epidemic broadcast where every validator shares a small Cluster Replicated Data Store (CRDS): contact info, versions, ledger tips, and votes. Repair is the companion recovery protocol: when a validator misses shreds from Turbine, it asks peers for the specific missing pieces so it can reconstruct the block.",
+    details: [
+      "Gossip uses a push/pull epidemic model — info spreads in O(log n) rounds",
+      "CRDS holds: node identities, IP/port tables, shred versions, epoch slots, vote state",
+      "Runs on its own port, separate from Turbine (shreds) and TPU (tx ingest)",
+      "Repair fills gaps: a node requests missing shred indices from peers that have them",
+      "Erasure coding (from Turbine) means a node only needs ENOUGH shreds, not all of them",
+      "New/restarting validators bootstrap their view of the cluster via gossip entrypoints",
+      "Gossip is metadata-only — actual block data moves via Turbine/Repair, not gossip",
+      "Malformed/spoofed gossip is a known attack surface, hence signature checks on CRDS",
+    ],
+    whyItMatters: "Turbine gets blocks out fast but assumes good network conditions; reality has packet loss, restarts, and laggards. Repair is the safety net that lets a validator that fell behind catch up shred-by-shred instead of re-downloading whole blocks. Gossip is how the cluster even knows who its members are and where to send data. Together they're the connective tissue: without gossip there's no leader schedule awareness or peer table; without repair, a single dropped shred could stall a validator. Understanding them demystifies how a 1,500-node network stays in sync.",
+    commonMistakes: [
+      "Thinking blocks propagate over gossip — gossip carries metadata, Turbine/Repair carry block data",
+      "Assuming a validator must receive 100% of shreds — erasure coding + repair fill the gaps",
+      "Confusing the gossip port with the TPU/RPC ports when configuring firewalls",
+      "Believing repair is rare — under real network conditions it runs constantly",
+    ],
+    code: `// Gossip data is observable: getClusterNodes() returns the gossip CRDS view.
+import { Connection } from "@solana/web3.js";
+const conn = new Connection("https://api.mainnet-beta.solana.com");
+
+const nodes = await conn.getClusterNodes();
+// Each entry is a peer's gossiped contact info:
+for (const n of nodes.slice(0, 3)) {
+  console.log({
+    pubkey: n.pubkey,
+    gossip: n.gossip,   // gossip ip:port
+    tpu:    n.tpu,      // where to send transactions
+    rpc:    n.rpc,      // public RPC, if any
+    version: n.version, // client version (also gossiped)
+  });
+}
+
+// You can't query Repair directly from an app — it's validator-internal —
+// but its existence is why a node that briefly drops offline rejoins and
+// backfills the slots it missed rather than forking off on its own.`,
+    links: [
+      { label: "Solana Docs — Gossip Service", url: "https://docs.anza.xyz/validator/gossip" },
+      { label: "Helius — Turbine, Gossip & Repair", url: "https://www.helius.dev/blog/turbine-block-propagation-on-solana" },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  CORE INFRA additions
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    icon: "Cpu",
+    tag: "Core Infra",
+    title: "Compute Units & Budget",
+    desc: "Every instruction consumes Compute Units (CU) — Solana's gas-equivalent metering of work (hashes, syscalls, account loads, byte copies). A transaction defaults to a 200k CU cap and may request up to 1.4M. The Compute Budget program lets you both set that ceiling and attach a price-per-CU (the priority fee). Exceed your requested limit and the whole transaction fails with an exhaustion error.",
+    details: [
+      "Default: 200,000 CU per instruction-bearing tx; max 1,400,000 CU per tx",
+      "Per-block limit (~60M CU) and per-account write limit (~12M CU) bound the whole block",
+      "setComputeUnitLimit(units): your hard ceiling — under-request and you'll abort mid-run",
+      "setComputeUnitPrice(microLamports): priority bid = price × units actually used",
+      "Common costs: CPI ~1000 CU base, ed25519 verify is cheap, log/serialize can be pricey",
+      "Simulate first to measure real CU usage, then set the limit ~10-20% above it",
+      "Right-sizing both saves fees AND improves landing — schedulers favor tight, predictable txs",
+      "Compute Budget instructions are themselves nearly free and must come before your logic",
+    ],
+    whyItMatters: "Compute budgeting is the single highest-leverage knob for transaction reliability and cost. Request too little and your tx fails on a hot path; request the 1.4M max blindly and you overpay on priority and crowd the block. The priority-fee market is denominated per-CU, so an over-sized limit inflates your bid for no benefit. Getting this right — measure with simulation, set a snug limit, price competitively — is the difference between transactions that land in one slot and ones that silently drop during congestion.",
+    commonMistakes: [
+      "Leaving the default 200k limit on a heavy tx → 'exceeded CUs' failure",
+      "Setting the limit to 1.4M 'just in case' → overpaying priority fee and worse scheduling",
+      "Pricing CU without measuring units, so the effective bid is wrong",
+      "Forgetting Compute Budget instructions must precede the instructions they govern",
+    ],
+    code: `import {
+  ComputeBudgetProgram, Connection, Transaction, VersionedTransaction,
+} from "@solana/web3.js";
+
+const conn = new Connection("https://api.mainnet-beta.solana.com");
+
+// 1) Simulate to learn the REAL compute cost before committing to a limit.
+async function rightSize(buildIxs: () => any[]) {
+  const probe = new Transaction().add(...buildIxs());
+  const sim = await conn.simulateTransaction(probe as any);
+  const used = sim.value.unitsConsumed ?? 200_000;
+  const limit = Math.ceil(used * 1.15); // ~15% headroom
+
+  return new Transaction().add(
+    ComputeBudgetProgram.setComputeUnitLimit({ units: limit }),
+    ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 25_000 }),
+    ...buildIxs(),
+  );
+}
+// Fee paid for priority = microLamports * limit / 1e6  (in lamports).
+// Tight 'limit' = lower fee for the same per-CU bid.`,
+    links: [
+      { label: "Solana Docs — Compute Budget", url: "https://solana.com/docs/core/fees#compute-budget" },
+      { label: "Helius — priority fees & compute", url: "https://www.helius.dev/blog/priority-fees-understanding-solanas-transaction-fee-mechanics" },
+    ],
+  },
+  {
+    icon: "HardDrive",
+    tag: "Core Infra",
+    title: "Rent & Rent Exemption",
+    desc: "On Solana, storage isn't free — every account must hold a minimum lamport balance proportional to its byte size to stay alive. This deposit is 'rent exemption'. Accounts at or above the threshold live indefinitely; the deposit is fully refundable when you close the account. Accounts below it are garbage-collected. In practice every account you create is made rent-exempt up front.",
+    details: [
+      "Rent-exempt minimum ≈ size_in_bytes × a fixed lamports-per-byte-year × ~2 years",
+      "A bare 0-data account needs ~0.00089 SOL; larger accounts cost proportionally more",
+      "The deposit is locked, not spent — closing the account returns every lamport",
+      "Periodic rent collection on non-exempt accounts was deprecated; exemption is effectively mandatory",
+      "getMinimumBalanceForRentExemption(size) tells you exactly how much to fund",
+      "Bigger data = more SOL locked: a 10MB account locks ~70 SOL",
+      "Closing an account reclaims rent — always close temporary accounts to recover funds",
+      "This is why state compression exists: avoid paying rent for millions of small accounts",
+    ],
+    whyItMatters: "Rent is the economic backstop that keeps Solana's state from growing unbounded — validators must hold all accounts in fast memory, so storage has a real cost. For builders, it means account creation has a non-trivial SOL cost you must fund, and it's recoverable: closing accounts (token accounts, PDAs, temp state) returns the rent. Forgetting to reclaim rent leaves SOL stranded across thousands of dead accounts. And the rent cost of one-account-per-item is exactly what makes compressed NFTs and state compression economically dramatic.",
+    commonMistakes: [
+      "Creating accounts without funding the rent-exempt minimum → 'insufficient funds for rent' failures",
+      "Hardcoding a rent amount instead of querying getMinimumBalanceForRentExemption for the size",
+      "Never closing temporary accounts, stranding recoverable SOL",
+      "Assuming rent is an ongoing fee — exempt accounts pay once and the deposit is refundable",
+    ],
+    code: `import {
+  Connection, SystemProgram, Transaction, Keypair,
+} from "@solana/web3.js";
+
+const conn = new Connection("https://api.mainnet-beta.solana.com");
+
+// Always compute the exact rent-exempt minimum for the account size you need.
+const SPACE = 165; // e.g. an SPL token account is 165 bytes
+const lamports = await conn.getMinimumBalanceForRentExemption(SPACE);
+console.log("Rent-exempt minimum:", lamports, "lamports");
+
+const payer = Keypair.generate();
+const newAccount = Keypair.generate();
+
+const createIx = SystemProgram.createAccount({
+  fromPubkey: payer.publicKey,
+  newAccountPubkey: newAccount.publicKey,
+  lamports,          // fund exactly the rent-exempt minimum (refundable)
+  space: SPACE,
+  programId: SystemProgram.programId,
+});
+
+// Later, closing the account sends those lamports back to the payer:
+// closeAccount() / CloseAccount instruction reclaims the full rent deposit.`,
+    links: [
+      { label: "Solana Docs — Rent", url: "https://solana.com/docs/core/accounts#rent" },
+      { label: "Helius — Solana accounts & rent", url: "https://www.helius.dev/blog/solana-account-model" },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  PROGRAMS additions
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    icon: "Code2",
+    tag: "Programs",
+    title: "SVM Bytecode (rBPF / SBF)",
+    desc: "Solana programs don't run native code — they compile to SBF (Solana Bytecode Format), a Solana-flavored variant of eBPF, and execute inside rBPF, a sandboxed register-based virtual machine. The VM meters every operation in compute units, restricts syscalls, and isolates programs from each other and the host. This is the actual execution engine beneath Sealevel's parallelism.",
+    details: [
+      "SBF = Solana's fork of eBPF; programs in Rust/C compile to SBF ELF binaries",
+      "rBPF is the Rust-based interpreter/JIT that runs SBF with strict sandboxing",
+      "Register VM (not stack-based): 11 registers, bounded stack, no arbitrary syscalls",
+      "Every opcode has a CU cost — the VM halts a program that exceeds its compute budget",
+      "Verifier rejects programs with unbounded loops, bad jumps, or illegal memory access",
+      "Programs are deployed as immutable-by-default bytecode in executable accounts",
+      "A loader (BPF Loader / Loader-v4) validates and runs the bytecode",
+      "Runtime v2 and loader-v4 modernize deployment, upgrades, and execution",
+    ],
+    whyItMatters: "Understanding the VM explains Solana's guarantees and limits: why programs must declare account access (the VM can't discover it at runtime), why deep recursion and huge stacks fail, why compute units exist (they meter VM opcodes), and why a buggy program can't corrupt others (sandbox isolation). When you hit 'access violation', 'computational budget exceeded', or memory errors, you're hitting rBPF's guardrails. It's also why Solana can run the same SVM in rollups and other contexts — the VM is a portable, well-defined execution target.",
+    commonMistakes: [
+      "Assuming programs run native machine code — they run sandboxed SBF bytecode with metered ops",
+      "Writing deeply recursive logic that blows the VM's bounded stack",
+      "Forgetting the verifier rejects unbounded loops — compute metering is the only allowed limiter",
+      "Confusing the SVM (execution engine) with Sealevel (the parallel scheduler around it)",
+    ],
+    code: `// You author in Rust; the toolchain emits SBF bytecode the VM executes.
+// A minimal native program entrypoint (no Anchor):
+use solana_program::{
+    account_info::AccountInfo, entrypoint, entrypoint::ProgramResult,
+    pubkey::Pubkey, msg,
+};
+
+entrypoint!(process_instruction);
+
+pub fn process_instruction(
+    _program_id: &Pubkey,
+    _accounts: &[AccountInfo],
+    _data: &[u8],
+) -> ProgramResult {
+    // This msg! call is a syscall — it costs compute units in the VM.
+    msg!("hello from SBF bytecode");
+    Ok(())
+}
+
+// cargo build-sbf  →  target/deploy/your_program.so  (the SBF ELF)
+// solana program deploy your_program.so  → the rBPF VM runs this bytecode,
+// metering every opcode and enforcing the sandbox on each invocation.`,
+    links: [
+      { label: "Anza — rBPF VM (GitHub)", url: "https://github.com/anza-xyz/sbpf" },
+      { label: "Solana Docs — programs & deployment", url: "https://solana.com/docs/core/programs" },
+    ],
+  },
+  {
+    icon: "Layers",
+    tag: "Programs",
+    title: "Token Extensions (Token-2022)",
+    desc: "Token-2022 is a second, superset SPL token program that adds native 'extensions' — opt-in features baked into the mint or token account rather than bolted on with custom programs. Transfer fees, confidential (encrypted) balances, transfer hooks, non-transferable 'soulbound' tokens, interest-bearing balances, metadata pointers, and permanent delegates all become first-class without a separate contract.",
+    details: [
+      "Lives at a different program id than the original SPL Token program — they coexist",
+      "Extensions are configured at mint creation and stored in the account's TLV data",
+      "Transfer Fee: protocol-level fee withheld on every transfer, claimable by the authority",
+      "Confidential Transfer: ElGamal-encrypted balances + ZK proofs hide amounts on-chain",
+      "Transfer Hook: invoke a custom program on every transfer (allowlists, royalties, KYC)",
+      "Non-Transferable: soulbound tokens for credentials/identity",
+      "Interest-Bearing + Metadata Pointer + Permanent Delegate + Default Account State",
+      "Wallets/dapps must support the new program id — not every integration does yet",
+    ],
+    whyItMatters: "Before Token-2022, things like transfer fees, royalties, or compliance gating required wrapping tokens in bespoke programs — fragile, non-composable, and easy to get wrong. Token Extensions make these features native and standardized, so wallets and DEXes can support them uniformly. For stablecoins and RWAs, confidential transfers and transfer hooks are the unlock for on-chain compliance. The catch: extensions live in a separate program, so you must explicitly target Token-2022 and confirm downstream tooling supports the specific extensions you use.",
+    commonMistakes: [
+      "Sending Token-2022 tokens to integrations that only know the legacy SPL Token program id",
+      "Forgetting transfer-hook tokens require extra accounts on every transfer instruction",
+      "Assuming all wallets render confidential or fee-bearing tokens correctly today",
+      "Mixing up the two program ids — accounts are not interchangeable between them",
+    ],
+    code: `import {
+  createMint, TOKEN_2022_PROGRAM_ID, ExtensionType,
+  getMintLen, createInitializeTransferFeeConfigInstruction,
+} from "@solana/spl-token";
+import { Connection, Keypair, SystemProgram, Transaction } from "@solana/web3.js";
+
+const conn = new Connection("https://api.devnet.solana.com");
+const payer = Keypair.generate();
+const mint = Keypair.generate();
+
+// A mint with the Transfer Fee extension (1% fee, capped) — Token-2022 only.
+const extensions = [ExtensionType.TransferFeeConfig];
+const mintLen = getMintLen(extensions);
+const lamports = await conn.getMinimumBalanceForRentExemption(mintLen);
+
+const tx = new Transaction().add(
+  SystemProgram.createAccount({
+    fromPubkey: payer.publicKey, newAccountPubkey: mint.publicKey,
+    space: mintLen, lamports, programId: TOKEN_2022_PROGRAM_ID,
+  }),
+  createInitializeTransferFeeConfigInstruction(
+    mint.publicKey, payer.publicKey, payer.publicKey,
+    100 /* basis points = 1% */, BigInt(5_000_000) /* max fee */,
+    TOKEN_2022_PROGRAM_ID,
+  ),
+  // ...then InitializeMint2 with TOKEN_2022_PROGRAM_ID
+);
+// Note: every transfer now withholds the fee automatically, on-chain.`,
+    links: [
+      { label: "Solana — Token Extensions", url: "https://solana.com/solutions/token-extensions" },
+      { label: "SPL Token-2022 docs", url: "https://www.solana-program.com/docs/token-2022" },
+    ],
+  },
+  {
+    icon: "Database",
+    tag: "Programs",
+    title: "State & ZK Compression",
+    desc: "Storing one account per item (e.g. an NFT) means paying rent per item — fine for thousands, ruinous for millions. State compression stores data in a concurrent Merkle tree where only the tiny root lives on-chain; the actual leaves live in cheap ledger/off-chain storage, validated by proofs. Compressed NFTs cut minting cost by orders of magnitude. ZK Compression (Light Protocol) extends the idea to general program state.",
+    details: [
+      "Concurrent Merkle tree: on-chain account holds only the root + a changelog buffer",
+      "Leaf data lives off the account model; validity is proven against the on-chain root",
+      "cNFTs: mint millions of NFTs for a fraction of the per-account rent cost",
+      "Reads/indexing rely on RPC providers that store and serve the leaves + proofs (DAS API)",
+      "ZK Compression generalizes this to fungible state with validity proofs (Light Protocol)",
+      "Trade-off: cheap writes, but updates need a proof and a supporting indexer",
+      "Great for airdrops, tickets, loyalty points, large collections — anything high-cardinality",
+      "Not for hot, frequently-mutated state where proof overhead dominates",
+    ],
+    whyItMatters: "Rent makes 'an account per user/item' economically impossible at internet scale — a 10M-item airdrop as real accounts could cost thousands of SOL just in rent. Compression collapses that to the cost of a single tree plus per-mint fees, making mass distribution viable. It's the reason Solana can do million-item NFT drops and large-scale loyalty programs cheaply. The cost is architectural: you depend on indexers (the DAS API) to reconstruct state and supply Merkle proofs, so reads are no longer a simple getAccountInfo.",
+    commonMistakes: [
+      "Reaching for compression on hot, frequently-updated state where proof overhead kills you",
+      "Forgetting compressed assets need a DAS-API RPC to read — they aren't normal accounts",
+      "Under-sizing the Merkle tree's max depth/buffer for the collection size you'll mint",
+      "Assuming a wallet shows cNFTs automatically — it must support the DAS read path",
+    ],
+    code: `// Reading compressed NFTs uses the DAS (Digital Asset Standard) API, not
+// getAccountInfo — the asset isn't a normal on-chain account.
+const RPC = "https://mainnet.helius-rpc.com/?api-key=YOUR_KEY";
+
+async function getCompressedAsset(assetId: string) {
+  const res = await fetch(RPC, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0", id: "1", method: "getAsset",
+      params: { id: assetId },
+    }),
+  });
+  const { result } = await res.json();
+  console.log("compressed:", result.compression?.compressed);
+  console.log("tree:", result.compression?.tree);     // the Merkle tree account
+  return result;
+}
+
+// Transferring a cNFT requires a Merkle proof fetched via getAssetProof,
+// passed into the Bubblegum transfer instruction — the program verifies the
+// leaf against the on-chain root. One tree root represents millions of leaves.`,
+    links: [
+      { label: "Solana — State Compression", url: "https://solana.com/developers/guides/javascript/compressed-nfts" },
+      { label: "Light Protocol — ZK Compression", url: "https://www.zkcompression.com/" },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  DATA FLOW additions
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    icon: "Hash",
+    tag: "Data Flow",
+    title: "Address Lookup Tables",
+    desc: "A legacy transaction can reference at most ~35 accounts before it busts the 1232-byte size limit — each address is 32 bytes. Address Lookup Tables (ALTs) are on-chain accounts that store lists of addresses; a versioned (v0) transaction then references them by a 1-byte index instead of the full 32-byte key. This lets a single transaction touch up to 256 accounts — essential for complex DeFi routes.",
+    details: [
+      "Each pubkey costs 32 bytes inline; an ALT reference costs ~1 byte (an index)",
+      "Create a table, extend it with addresses, then reference it in a v0 transaction",
+      "Raises the practical account ceiling from ~35 to 256 per transaction",
+      "Tables must be 'warmed' — addresses are usable ~1 slot after being added",
+      "ALTs are reusable across many transactions — create once, reference forever",
+      "Critical for aggregators (Jupiter) routing swaps across many pools in one tx",
+      "Tables can be frozen (immutable) or kept extendable by an authority",
+      "Only works with versioned (v0) transactions, not legacy ones",
+    ],
+    whyItMatters: "The 1232-byte transaction limit is a hard wall, and accounts are the biggest contributor to size. Without ALTs, a multi-hop swap or a transaction touching many PDAs simply won't fit — you'd have to split it, breaking atomicity. ALTs are what make Solana's most powerful composability possible: a single atomic transaction that routes liquidity across a dozen pools or settles a complex position. If you're building anything that touches more than a handful of accounts, ALTs aren't optional — they're the mechanism that keeps your transaction under the wire.",
+    commonMistakes: [
+      "Using a freshly-extended ALT in the same slot before its addresses are active",
+      "Trying to use ALTs with legacy transactions — they require v0 (versioned) txs",
+      "Recreating a new table per transaction instead of reusing a warmed, shared one",
+      "Forgetting that the ALT account itself must be loaded, adding to (but net-reducing) size",
+    ],
+    code: `import {
+  Connection, Keypair, PublicKey, TransactionMessage,
+  VersionedTransaction, AddressLookupTableProgram,
+} from "@solana/web3.js";
+
+const conn = new Connection("https://api.mainnet-beta.solana.com");
+const payer = Keypair.generate();
+
+// 1) Create + extend a lookup table with the addresses you reuse often.
+const slot = await conn.getSlot();
+const [createIx, tableAddress] = AddressLookupTableProgram.createLookupTable({
+  authority: payer.publicKey, payer: payer.publicKey, recentSlot: slot,
+});
+const extendIx = AddressLookupTableProgram.extendLookupTable({
+  lookupTable: tableAddress, authority: payer.publicKey, payer: payer.publicKey,
+  addresses: [/* many PublicKeys you touch repeatedly */],
+});
+// ...send createIx + extendIx, then wait a slot for warm-up.
+
+// 2) Build a v0 tx that references the table (accounts become 1-byte indices).
+const lut = (await conn.getAddressLookupTable(tableAddress)).value!;
+const message = new TransactionMessage({
+  payerKey: payer.publicKey,
+  recentBlockhash: (await conn.getLatestBlockhash()).blockhash,
+  instructions: [/* your many-account instructions */],
+}).compileToV0Message([lut]);          // <- the table compresses the addresses
+const vtx = new VersionedTransaction(message);`,
+    links: [
+      { label: "Solana Docs — Address Lookup Tables", url: "https://solana.com/docs/advanced/lookup-tables" },
+      { label: "Solana — Versioned Transactions", url: "https://solana.com/docs/advanced/versions" },
+    ],
+  },
+  {
+    icon: "Eye",
+    tag: "Data Flow",
+    title: "Geyser & Data Streaming",
+    desc: "Polling RPC (getAccountInfo, getSignaturesForAddress) is fine for small apps but can't keep up with high-throughput indexing. Geyser is a validator plugin interface that streams account writes, transactions, slots, and blocks out of the validator in real time — straight into Kafka, gRPC, Postgres, or a custom sink. It's how indexers, explorers, and trading systems get low-latency, complete data without hammering RPC.",
+    details: [
+      "Geyser plugins hook directly into the validator's write path (no polling)",
+      "Streams: account updates, transactions, slot status, block metadata, entries",
+      "Yellowstone gRPC is the popular open-source Geyser plugin for streaming",
+      "Sub-second latency vs polling RPC, and you never miss an update between polls",
+      "Powers indexers, the DAS API, real-time dashboards, liquidation bots, MEV searchers",
+      "Runs on (or beside) a validator — you consume the stream, you don't run the plugin yourself",
+      "Filter server-side by account owner, program, or signature to cut bandwidth",
+      "Webhooks (Helius) are a managed abstraction over the same firehose for simpler use cases",
+    ],
+    whyItMatters: "If your app needs to react to on-chain events — a new trade, a liquidation threshold, an account balance change — polling introduces latency and gaps, and at scale it gets rate-limited or expensive. Geyser flips the model: the validator pushes every relevant change to you the instant it happens. Every serious Solana data product (explorers, the DAS read path for compression, trading infra) is built on a Geyser stream, not RPC polling. Knowing this is the difference between an app that feels real-time and one that's always a few seconds behind.",
+    commonMistakes: [
+      "Polling getProgramAccounts in a tight loop instead of subscribing to a stream",
+      "Assuming WebSocket logsSubscribe is as complete/reliable as Geyser for indexing",
+      "Not filtering the stream server-side, then drowning in irrelevant updates",
+      "Treating webhooks/Geyser as exactly-once — design consumers to be idempotent",
+    ],
+    code: `// Consuming a Yellowstone gRPC (Geyser) stream — subscribe to account writes
+// for a specific program and react in real time, no polling.
+import Client from "@triton-one/yellowstone-grpc";
+
+const client = new Client("https://your-grpc-endpoint:443", "TOKEN", {});
+const stream = await client.subscribe();
+
+stream.on("data", (update) => {
+  if (update.account) {
+    const a = update.account.account;
+    console.log("account changed:", a.pubkey, "lamports:", a.lamports);
+    // ...decode and act: update a cache, trigger a liquidation check, etc.
+  }
+});
+
+// Server-side filter: only stream accounts owned by one program.
+stream.write({
+  accounts: {
+    myFilter: { owner: ["TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"] },
+  },
+  commitment: 1, // confirmed
+});
+// This is push-based and gapless — the validator emits every write as it lands.`,
+    links: [
+      { label: "Yellowstone gRPC (Geyser)", url: "https://github.com/rpcpool/yellowstone-grpc" },
+      { label: "Solana Docs — Geyser plugins", url: "https://docs.anza.xyz/validator/geyser" },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  SYSTEM DESIGN additions
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    icon: "Server",
+    tag: "System Design",
+    title: "AccountsDB, Snapshots & Ledger",
+    desc: "A validator keeps three distinct stores: the Ledger (the append-only history of entries/blocks), AccountsDB (the live, mutable state of every account, held largely in memory + memory-mapped files), and Snapshots (periodic compressed dumps of AccountsDB used to bootstrap new nodes fast). Understanding the split explains why state queries are instant but historical lookups need an archive.",
+    details: [
+      "Ledger (blockstore): immutable record of shreds/entries/blocks; grows forever",
+      "AccountsDB: current state only — what every account holds right now",
+      "AccountsDB is heavily memory-mapped (the lineage of 'Cloudbreak') for O(1) lookups",
+      "Snapshots: full + incremental compressed state dumps, taken every N slots",
+      "A new validator downloads a recent snapshot to join in minutes, not by replaying genesis",
+      "Most validators prune old ledger — full history lives on archival/warehouse nodes + BigTable",
+      "Account Index lets getProgramAccounts filter by owner/data without scanning everything",
+      "Accounts Lattice Hash / state hashing lets nodes agree on the state root",
+    ],
+    whyItMatters: "This architecture is why 'what's the balance now?' is a fast in-memory read while 'what was this account 6 months ago?' may not be answerable from a normal RPC — most nodes don't keep that history. It explains snapshot-based fast bootstrapping, why getProgramAccounts can be heavy (it scans AccountsDB), and why you need an archival/indexer provider for deep history. When you reason about RPC behavior, rate limits, and which queries are cheap vs expensive, you're really reasoning about which store they hit.",
+    commonMistakes: [
+      "Expecting a default RPC to serve months-old historical state — most prune the ledger",
+      "Running unfiltered getProgramAccounts over a huge program and timing out (it scans AccountsDB)",
+      "Confusing the ledger (history) with AccountsDB (current state) when reasoning about queries",
+      "Assuming all nodes have all history — use archival/warehouse providers for the past",
+    ],
+    code: `import { Connection, PublicKey } from "@solana/web3.js";
+const conn = new Connection("https://api.mainnet-beta.solana.com");
+
+// CURRENT STATE (AccountsDB) — fast, in-memory:
+const acc = await conn.getAccountInfo(new PublicKey("So111...11112"));
+console.log("lives in AccountsDB, instant:", acc?.lamports);
+
+// FILTERED STATE SCAN — hits the account index; can be heavy. Always filter.
+const owned = await conn.getProgramAccounts(
+  new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
+  { filters: [{ dataSize: 165 }, { memcmp: { offset: 32, bytes: "OWNER_PUBKEY" } }] },
+);
+console.log("matched accounts:", owned.length);
+
+// DEEP HISTORY (old ledger) — a normal node may return null; you need an
+// archival RPC. Snapshots are how a fresh validator skips replaying genesis:
+// it downloads a recent AccountsDB snapshot and starts from there.`,
+    links: [
+      { label: "Anza — AccountsDB", url: "https://www.anza.xyz/blog" },
+      { label: "Solana Docs — validator architecture", url: "https://docs.anza.xyz/validator/anatomy" },
+    ],
+  },
+  {
+    icon: "Activity",
+    tag: "System Design",
+    title: "Banking Stage & The Scheduler",
+    desc: "Inside the leader's TPU, the Banking Stage is where ordered, verified transactions actually execute and update state. Its scheduler decides which transactions run in parallel without conflicting on account writes — the practical realization of Sealevel. The 2024 'central scheduler' replaced the older multi-threaded greedy approach with a single scheduler that builds a conflict graph for far better throughput and fairness.",
+    details: [
+      "Banking Stage = the execution+packing phase of the leader's TPU pipeline",
+      "Takes verified txs, groups non-conflicting ones, executes them across worker threads",
+      "Conflict = two txs that write the same account; they must serialize",
+      "Central scheduler (greedy, conflict-graph based) replaced the old thread-per-lane model",
+      "Better scheduling = more of the block's compute budget actually used productively",
+      "Priority + compute estimates feed the scheduler's ordering decisions",
+      "This is where your priority fee and tight CU limit pay off in landing odds",
+      "Drops/reorders here are why a 'sent' tx may never land even with space available",
+    ],
+    whyItMatters: "Sealevel is the idea (parallel execution by declared account access); the Banking Stage scheduler is the implementation that makes or breaks it. The shift to a central scheduler meaningfully raised effective throughput and made inclusion fairer under load. For builders this is the missing link between 'I set a priority fee' and 'my tx landed': the scheduler ranks and packs transactions here, favoring well-specified, non-conflicting, properly-priced txs. It also explains write-lock contention — many txs fighting over one hot account serialize through this stage and bottleneck.",
+    commonMistakes: [
+      "Blaming the network when a hot, contended account is serializing all your txs in banking",
+      "Assuming parallel execution is automatic — conflicting account writes still serialize",
+      "Ignoring how priority + CU estimates influence scheduler ordering, then wondering why txs drop",
+      "Thinking 'block had space' means your tx should have landed — the scheduler still has to pick it",
+    ],
+    code: `// Banking Stage is validator-internal — no direct API. But you optimize FOR it:
+import { ComputeBudgetProgram, Transaction } from "@solana/web3.js";
+
+// 1) Minimize write-lock contention. Spreading writes across many accounts
+//    (e.g. per-user PDAs) lets the scheduler parallelize them. One global
+//    counter account forces every tx to serialize through banking.
+
+// 2) Give the scheduler accurate signals so it ranks you well:
+const tx = new Transaction().add(
+  ComputeBudgetProgram.setComputeUnitLimit({ units: 220_000 }),  // tight estimate
+  ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 40_000 }), // real bid
+  // ...your instructions, touching as few SHARED writable accounts as possible
+);
+
+// Design rule of thumb:
+//   readable-shared accounts  → parallel-friendly (many readers OK)
+//   writable-shared accounts  → contention point (serialize in banking)
+// The fewer hot writable accounts you share, the more the scheduler can fan out.`,
+    links: [
+      { label: "Anza — the central scheduler", url: "https://www.anza.xyz/blog/solana-transaction-scheduler" },
+      { label: "Helius — how Solana transactions land", url: "https://www.helius.dev/blog/how-to-land-transactions-on-solana" },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  MEV addition
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    icon: "GitBranch",
+    tag: "MEV",
+    title: "Jito: Bundles & Block Engine",
+    desc: "Jito is the dominant MEV infrastructure on Solana. Its block engine runs an off-chain auction where searchers submit 'bundles' — ordered groups of transactions that execute atomically and sequentially — and bid 'tips' for priority placement. Validators running the Jito-Solana client include the highest-value bundles. This gives Solana a controlled, out-of-protocol MEV market instead of a chaotic public mempool free-for-all.",
+    details: [
+      "Bundle: up to 5 txs that execute atomically, in order, all-or-nothing",
+      "Searchers bid 'tips' (paid to a tip account) to win placement in the block",
+      "Block Engine runs the auction off-chain and forwards winning bundles to the leader",
+      "Solana has no public mempool — Jito's relay/auction fills that ordering role",
+      "Validators get tip revenue; a share flows to stakers (boosting effective APY)",
+      "Atomicity makes risk-free arbitrage and liquidations expressible as one unit",
+      "Bundles can guarantee a tx lands BEFORE or AFTER another — key for backruns",
+      "Jito also runs liquid staking (JitoSOL) capturing MEV for stakers",
+    ],
+    whyItMatters: "Without a mempool, Solana's MEV doesn't look like Ethereum's — there's no public pending-tx queue to snipe. Jito created the actual market structure: a sealed off-chain auction where ordering is bought with tips and expressed as atomic bundles. This matters whether you're extracting MEV (you submit bundles to win arbitrage/liquidations atomically) or defending against it (your protocol design and the bundle mechanics determine sandwich exposure). It also reshapes validator economics — tip revenue is now a major income stream and a reason stakers pick Jito-enabled validators.",
+    commonMistakes: [
+      "Expecting an Ethereum-style public mempool to frontrun — Solana ordering happens via Jito's sealed auction",
+      "Submitting a bundle without enough tip to win the auction, then assuming it 'failed'",
+      "Forgetting bundles are atomic — if one tx in the bundle fails, the whole bundle is dropped",
+      "Confusing priority fees (per-tx, protocol-level) with Jito tips (per-bundle, auction-level)",
+    ],
+    code: `// Searchers submit bundles to the Jito Block Engine. Sketch of the flow:
+import { Connection, VersionedTransaction } from "@solana/web3.js";
+
+// A bundle is an ordered array of fully-signed txs that land atomically.
+// One of them transfers a TIP to a Jito tip account — that's your auction bid.
+async function sendBundle(txs: VersionedTransaction[]) {
+  const encoded = txs.map((t) => Buffer.from(t.serialize()).toString("base64"));
+  const res = await fetch("https://mainnet.block-engine.jito.wtf/api/v1/bundles", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0", id: 1, method: "sendBundle",
+      params: [encoded, { encoding: "base64" }],
+    }),
+  });
+  return (await res.json()).result; // bundle id
+}
+
+// Ordering guarantees you can express:
+//   [victimSwap, yourBackrun]  → you run strictly AFTER the target (backrun)
+//   all-or-nothing             → no partial fills, no failed-arb gas bleed
+// The higher your tip, the better your placement in the sealed auction.`,
+    links: [
+      { label: "Jito Labs Docs", url: "https://docs.jito.wtf" },
+      { label: "Helius — MEV on Solana & Jito", url: "https://www.helius.dev/blog/solana-mev-an-introduction" },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  ECONOMICS addition
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    icon: "BarChart3",
+    tag: "Economics",
+    title: "Local Fee Markets",
+    desc: "Solana's fee market is local, not global. Congestion on one hot account (a popular mint, a single DEX pool) only raises priority fees for transactions that touch that account — it doesn't tax the rest of the network. This is a deliberate consequence of declaring account access up front: the scheduler knows exactly which accounts each tx contends for, so it can price contention per-account instead of per-block.",
+    details: [
+      "Fees spike only for txs writing the contended account(s), not the whole chain",
+      "Built on the same up-front account-access declaration that powers parallelism",
+      "Per-account write limit (~12M CU/block) caps how much one account can hog",
+      "During a hot mint, unrelated swaps elsewhere stay cheap — no global gas auction",
+      "You bid priority (micro-lamports/CU) only against others touching the same accounts",
+      "Estimate fees per-account: getRecentPrioritizationFees is keyed to the accounts you pass",
+      "Contrasts with Ethereum's single global base fee that rises for everyone at once",
+      "Design implication: spreading state across accounts spreads (and lowers) fee pressure",
+    ],
+    whyItMatters: "On a global fee market, one viral NFT mint makes every transaction on the chain expensive. Solana's local fee markets contain that blast radius — the mint's contenders pay up, everyone else is unaffected. For fee estimation this is critical: you must price priority against the specific accounts your transaction writes, not against some network-wide average. For protocol design it's a direct incentive to avoid single hot accounts (sharding state into per-user PDAs), because concentrated writes both serialize execution and concentrate fee pressure.",
+    commonMistakes: [
+      "Estimating priority fees globally instead of for the specific accounts your tx writes",
+      "Designing around one hot global account, then paying a self-inflicted local fee spike",
+      "Assuming network-wide congestion when only your target account is contended",
+      "Ignoring the per-account write cap, so a single account bottlenecks your throughput",
+    ],
+    code: `import { Connection, PublicKey } from "@solana/web3.js";
+const conn = new Connection("https://api.mainnet-beta.solana.com");
+
+// Fees are LOCAL — estimate against the exact accounts your tx will write.
+const hotAccounts = [
+  new PublicKey("HOT_POOL_OR_MINT_ADDRESS"),
+  new PublicKey("YOUR_WRITABLE_PDA"),
+];
+
+const samples = await conn.getRecentPrioritizationFees({
+  lockedWritableAccounts: hotAccounts,   // <- per-account, not network-wide
+});
+
+// Pick a competitive percentile of recent fees FOR THESE ACCOUNTS.
+const fees = samples.map((s) => s.prioritizationFee).sort((a, b) => a - b);
+const p75 = fees[Math.floor(fees.length * 0.75)] ?? 0;
+console.log("suggested micro-lamports/CU for these accounts:", p75);
+
+// Touching an uncontended account? p75 is often 0 — you pay base fee only,
+// even while a mint elsewhere is in a bidding war. That's local fee markets.`,
+    links: [
+      { label: "Solana Docs — fees & prioritization", url: "https://solana.com/docs/core/fees" },
+      { label: "Helius — local fee markets", url: "https://www.helius.dev/blog/solana-local-fee-markets" },
+    ],
+  },
 ];
 
 export const tagColors: Record<string, string> = {
@@ -2291,11 +3135,28 @@ export const META: Record<string, Meta> = {
   "Solana Clusters": { id: "clusters", level: "beginner" },
   "Sandwich Attacks & Protection": { id: "sandwich", level: "advanced" },
   "Validator Economics": { id: "validator-economics", level: "advanced" },
+  "Alpenglow Consensus": { id: "alpenglow", level: "advanced" },
+  "Firedancer & Validator Clients": { id: "firedancer", level: "advanced" },
+  "DoubleZero": { id: "doublezero", level: "advanced" },
+  "Async Execution & Rising Block Limits": { id: "async-execution", level: "advanced" },
+  "QUIC & Stake-Weighted QoS": { id: "quic-swqos", level: "intermediate" },
+  "Gossip & Repair": { id: "gossip-repair", level: "advanced" },
+  "Compute Units & Budget": { id: "compute-units", level: "intermediate" },
+  "Rent & Rent Exemption": { id: "rent", level: "beginner" },
+  "SVM Bytecode (rBPF / SBF)": { id: "svm-bytecode", level: "advanced" },
+  "Token Extensions (Token-2022)": { id: "token-extensions", level: "intermediate" },
+  "State & ZK Compression": { id: "state-compression", level: "advanced" },
+  "Address Lookup Tables": { id: "lookup-tables", level: "intermediate" },
+  "Geyser & Data Streaming": { id: "geyser", level: "intermediate" },
+  "AccountsDB, Snapshots & Ledger": { id: "accountsdb", level: "advanced" },
+  "Banking Stage & The Scheduler": { id: "banking-stage", level: "advanced" },
+  "Jito: Bundles & Block Engine": { id: "jito", level: "advanced" },
+  "Local Fee Markets": { id: "local-fee-markets", level: "intermediate" },
 };
 export const levelMeta: Record<Level, { label: string; color: string }> = {
   beginner: { label: "Beginner", color: "var(--sol-green)" },
-  intermediate: { label: "Intermediate", color: "var(--sol-blue)" },
-  advanced: { label: "Advanced", color: "var(--sol-purple)" },
+  intermediate: { label: "Intermediate", color: "var(--text-mid)" },
+  advanced: { label: "Advanced", color: "var(--text)" },
 };
 export const levelOrder: Level[] = ["beginner", "intermediate", "advanced"];
 

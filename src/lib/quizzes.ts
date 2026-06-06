@@ -656,6 +656,572 @@ export const quizBank: Record<string, QuizQuestion[]> = {
       explain: "Uptime and epoch credits matter. A reliable validator at modest commission often out-earns a flaky 0% one — check the credits, not just the headline rate.",
     },
   ],
+
+  alpenglow: [
+    {
+      q: "What two components does Alpenglow introduce to replace Tower BFT and on-chain vote transactions?",
+      options: ["Turbine and Gulf Stream", "Votor and Rotor", "Sealevel and Cloudbreak", "QUIC and SWQoS"],
+      answer: 1,
+      explain: "Votor handles voting via off-chain BLS-aggregated certificates; Rotor replaces Turbine's multi-hop tree with a flatter single-relay broadcast.",
+    },
+    {
+      q: "Roughly what finality does Alpenglow target, versus today's ~12.8s?",
+      options: ["~5 seconds", "~100–150 milliseconds", "~2 seconds", "Instant, zero latency"],
+      answer: 1,
+      explain: "If ≥80% of stake responds, finality lands in ~100ms; a second round (60–80% participation) still finalizes within ~150–250ms.",
+    },
+    {
+      q: "What happens to Proof of History under Alpenglow?",
+      options: [
+        "It's deleted entirely",
+        "It remains as an ordering clock but is removed from the voting hot path",
+        "It becomes the consensus mechanism",
+        "It replaces Turbine",
+      ],
+      answer: 1,
+      explain: "PoH stays as a cryptographic clock for ordering; Alpenglow just takes it out of the critical voting path and eliminates vote transactions.",
+    },
+  ],
+  firedancer: [
+    {
+      q: "What is Firedancer?",
+      options: [
+        "A new blockchain competing with Solana",
+        "An independent Solana validator client written in C by Jump Crypto",
+        "A Solana token",
+        "An RPC provider",
+      ],
+      answer: 1,
+      explain: "Firedancer is a from-scratch validator client in C, independent of the Rust Agave client — same network, different implementation.",
+    },
+    {
+      q: "Why does a second independent validator client matter?",
+      options: [
+        "It creates a competing chain",
+        "Client diversity means a consensus bug in one client can't halt the whole network",
+        "It lowers transaction fees directly",
+        "It replaces the need for validators",
+      ],
+      answer: 1,
+      explain: "If one client has a consensus-breaking bug, an independent client that disagrees keeps the network safe — diversity removes a single point of failure.",
+    },
+    {
+      q: "What is 'Frankendancer'?",
+      options: [
+        "A meme token",
+        "A hybrid of Firedancer's networking stack with Agave's runtime and consensus",
+        "The full pure-C Firedancer client",
+        "A testnet-only fork",
+      ],
+      answer: 1,
+      explain: "Frankendancer combines Firedancer's high-performance networking with Agave's runtime/consensus, and already runs a meaningful share of stake.",
+    },
+  ],
+  doublezero: [
+    {
+      q: "What is DoubleZero?",
+      options: [
+        "A Layer-2 rollup",
+        "A dedicated private fiber network ('Network Layer 1') for validator consensus traffic",
+        "A new consensus algorithm",
+        "A staking pool",
+      ],
+      answer: 1,
+      explain: "DoubleZero gives consensus its own physical fiber, bypassing the public internet to cut latency and filter spam at the hardware level.",
+    },
+    {
+      q: "How does DoubleZero's multicast change block propagation?",
+      options: [
+        "It encrypts every block",
+        "It broadcasts a block to all validators at once instead of relaying hop-by-hop",
+        "It removes the need for validators",
+        "It compresses blocks with zero-knowledge proofs",
+      ],
+      answer: 1,
+      explain: "Multicast is one-to-many: the leader broadcasts to all validators simultaneously rather than forwarding sequentially, cutting propagation latency.",
+    },
+    {
+      q: "What hardware does DoubleZero use to filter traffic at line rate?",
+      options: ["GPUs", "FPGAs", "ASphalt routers", "Quantum chips"],
+      answer: 1,
+      explain: "FPGAs perform signature verification and deduplication at 100+ Gbps, scrubbing spam before it reaches a validator's CPU.",
+    },
+  ],
+  "async-execution": [
+    {
+      q: "What did SIMD-0256 do in 2025?",
+      options: [
+        "Removed transaction fees",
+        "Raised the per-block compute limit from 50M to 60M CU",
+        "Launched Firedancer",
+        "Added confidential transfers",
+      ],
+      answer: 1,
+      explain: "SIMD-0256 lifted the block limit to 60M CU; SIMD-0286 proposes pushing it to 100M.",
+    },
+    {
+      q: "What is the core idea of Asynchronous Program Execution (APE)?",
+      options: [
+        "Running programs on a GPU",
+        "Decoupling agreeing on transaction order from computing the resulting state",
+        "Skipping consensus entirely",
+        "Executing every tx twice for safety",
+      ],
+      answer: 1,
+      explain: "Async execution separates ordering (consensus) from state computation, so block production isn't bounded by single-thread execution speed.",
+    },
+    {
+      q: "Even with bigger block limits, what cap can still bottleneck a single hot account?",
+      options: [
+        "The 1232-byte tx size limit",
+        "The per-account write limit (~12M CU/block)",
+        "The signature limit",
+        "The rent ceiling",
+      ],
+      answer: 1,
+      explain: "One account can only absorb so much write activity per block (~12M CU), so concentrating writes on a hot account bottlenecks regardless of block size.",
+    },
+  ],
+  "quic-swqos": [
+    {
+      q: "Why did Solana move transaction ingest to QUIC?",
+      options: [
+        "To encrypt blocks",
+        "To add connection identity, flow control, and back-pressure against spam",
+        "To increase the block size",
+        "To remove the need for RPCs",
+      ],
+      answer: 1,
+      explain: "Plain UDP let anyone flood the ingest port. QUIC adds identity and flow control so leaders can rate-limit and throttle abusive senders.",
+    },
+    {
+      q: "What does Stake-Weighted QoS (SWQoS) guarantee?",
+      options: [
+        "Lower transaction fees",
+        "High-stake connections get a reserved share of a leader's ingest capacity",
+        "Faster block times",
+        "Free transactions for stakers",
+      ],
+      answer: 1,
+      explain: "SWQoS reserves most ingest bandwidth for stake-weighted peers, so spam from unstaked sources can't crowd real traffic out of the leader.",
+    },
+    {
+      q: "Why might the same transaction land via a staked sender but vanish via a public RPC?",
+      options: [
+        "Public RPCs charge more",
+        "The staked connection rides a reserved ingest lane under SWQoS",
+        "Public RPCs use a different blockchain",
+        "Priority fees don't apply to public RPCs",
+      ],
+      answer: 1,
+      explain: "Under congestion, reaching the leader at all depends on ingest priority — staked connections get a reserved lane, unstaked traffic competes in the flood.",
+    },
+  ],
+  "gossip-repair": [
+    {
+      q: "What does the gossip protocol actually carry?",
+      options: [
+        "Full block data",
+        "Cluster metadata — node identities, contact info, versions, votes",
+        "User transactions",
+        "Private keys",
+      ],
+      answer: 1,
+      explain: "Gossip spreads a small replicated data store (CRDS) of metadata. Actual block data moves via Turbine and Repair, not gossip.",
+    },
+    {
+      q: "What is the Repair protocol for?",
+      options: [
+        "Fixing corrupted private keys",
+        "Requesting specific missing shreds so a validator can reconstruct a block",
+        "Repairing the leader schedule",
+        "Restarting crashed validators",
+      ],
+      answer: 1,
+      explain: "When a node misses shreds from Turbine, Repair lets it request the exact missing pieces from peers — erasure coding means it only needs 'enough'.",
+    },
+    {
+      q: "Why doesn't a validator need 100% of a block's shreds?",
+      options: [
+        "Blocks are optional",
+        "Erasure coding lets it reconstruct the block from a sufficient subset",
+        "Gossip fills in the rest",
+        "It re-downloads the whole block every time",
+      ],
+      answer: 1,
+      explain: "Turbine's erasure coding (Forward Error Correction) means a node can rebuild the full block from enough shreds, with Repair filling any remaining gaps.",
+    },
+  ],
+  "compute-units": [
+    {
+      q: "What is the default compute-unit cap on a transaction, and the maximum you can request?",
+      options: ["50k / 500k", "200k default / 1.4M max", "1M / 10M", "There is no cap"],
+      answer: 1,
+      explain: "A tx defaults to 200,000 CU and can request up to 1,400,000 CU via the Compute Budget program.",
+    },
+    {
+      q: "Why is requesting the full 1.4M CU 'just in case' a bad idea?",
+      options: [
+        "It's not allowed",
+        "An oversized limit inflates your priority bid and worsens scheduling",
+        "It makes the tx fail",
+        "It burns extra SOL permanently",
+      ],
+      answer: 1,
+      explain: "Priority fee = price-per-CU × requested units, and schedulers favor tight, predictable txs. Over-requesting overpays and packs worse.",
+    },
+    {
+      q: "What's the right way to size your compute-unit limit?",
+      options: [
+        "Always use the default",
+        "Simulate to measure real usage, then set the limit ~10–20% above it",
+        "Guess based on tx byte size",
+        "Set it to zero and let the runtime decide",
+      ],
+      answer: 1,
+      explain: "Simulate the tx, read unitsConsumed, and add a small headroom. Tight limits mean lower fees and better landing odds.",
+    },
+  ],
+  rent: [
+    {
+      q: "What is rent exemption on Solana?",
+      options: [
+        "A monthly fee paid to validators",
+        "A refundable minimum balance an account holds to live indefinitely",
+        "A tax on transactions",
+        "A penalty for idle accounts",
+      ],
+      answer: 1,
+      explain: "Accounts must hold a minimum lamport deposit proportional to their size to stay alive. It's locked, not spent — closing the account returns it in full.",
+    },
+    {
+      q: "How do you recover the SOL locked in rent?",
+      options: [
+        "You can't — it's burned",
+        "Close the account; the rent deposit is returned to the payer",
+        "Wait one epoch and it auto-refunds",
+        "Stake it",
+      ],
+      answer: 1,
+      explain: "Rent is a refundable deposit. Closing temporary accounts (token accounts, PDAs, scratch state) reclaims the full balance.",
+    },
+    {
+      q: "Why is rent a key motivation for state compression?",
+      options: [
+        "Compression avoids signatures",
+        "Paying rent per account is ruinous at millions of items, so compression stores them under one tree",
+        "Compression removes the need for validators",
+        "Rent makes transactions slower",
+      ],
+      answer: 1,
+      explain: "An account-per-item model means rent per item. Compression stores millions of leaves under a single on-chain Merkle root, collapsing the cost.",
+    },
+  ],
+  "svm-bytecode": [
+    {
+      q: "What do Solana programs compile to and run inside?",
+      options: [
+        "Native x86 machine code on bare metal",
+        "SBF bytecode running in the sandboxed rBPF virtual machine",
+        "JavaScript in a browser engine",
+        "EVM bytecode",
+      ],
+      answer: 1,
+      explain: "Programs compile to SBF (a Solana fork of eBPF) and execute in rBPF, a register-based VM that meters every opcode and sandboxes the program.",
+    },
+    {
+      q: "Why does the SVM reject programs with unbounded loops?",
+      options: [
+        "Loops are inefficient",
+        "The verifier requires bounded control flow; compute metering is the only allowed limiter",
+        "Loops cost too much rent",
+        "It doesn't — loops are fine",
+      ],
+      answer: 1,
+      explain: "The bytecode verifier rejects unbounded loops and illegal jumps. The compute budget is what halts long-running programs, not arbitrary timeouts.",
+    },
+    {
+      q: "What does the VM's sandbox guarantee?",
+      options: [
+        "Programs run faster than native code",
+        "A buggy program can't corrupt other programs or the host",
+        "Programs never fail",
+        "Unlimited memory access",
+      ],
+      answer: 1,
+      explain: "rBPF isolates each program — bounded stack, restricted syscalls, no arbitrary memory — so one program's bug can't escape its sandbox.",
+    },
+  ],
+  "token-extensions": [
+    {
+      q: "What is Token-2022 (Token Extensions)?",
+      options: [
+        "A new version of SOL",
+        "A superset SPL token program adding native opt-in features like transfer fees and confidential transfers",
+        "A bridge to Ethereum",
+        "A staking contract",
+      ],
+      answer: 1,
+      explain: "Token-2022 is a separate program (different id) that bakes features — fees, hooks, confidential balances, non-transferable tokens — into the mint natively.",
+    },
+    {
+      q: "What does the Confidential Transfer extension do?",
+      options: [
+        "Hides the sender's IP address",
+        "Encrypts balances/amounts on-chain using ElGamal encryption and ZK proofs",
+        "Makes transfers free",
+        "Disables transfers entirely",
+      ],
+      answer: 1,
+      explain: "Confidential transfers keep token amounts encrypted on-chain while still proving validity with zero-knowledge proofs.",
+    },
+    {
+      q: "What's a common integration pitfall with Token-2022?",
+      options: [
+        "It only works on devnet",
+        "Sending its tokens to integrations that only recognize the legacy SPL Token program id",
+        "It has no metadata",
+        "It can't be transferred",
+      ],
+      answer: 1,
+      explain: "Token-2022 lives at a different program id. Wallets/DEXes must explicitly support it (and any specific extensions like transfer hooks) or transfers break.",
+    },
+  ],
+  "state-compression": [
+    {
+      q: "How does state compression store data cheaply?",
+      options: [
+        "It deletes old data",
+        "Only a Merkle root lives on-chain; leaf data lives off-account and is proven against the root",
+        "It zips each account",
+        "It moves data to Ethereum",
+      ],
+      answer: 1,
+      explain: "A concurrent Merkle tree keeps just the root (and a changelog) on-chain. Leaves live cheaply off the account model, validated by proofs.",
+    },
+    {
+      q: "How do you read a compressed NFT?",
+      options: [
+        "With getAccountInfo like any account",
+        "Via the DAS (Digital Asset Standard) API on a supporting RPC",
+        "By running your own validator",
+        "You can't read them",
+      ],
+      answer: 1,
+      explain: "Compressed assets aren't normal accounts. You read them through the DAS API (e.g. getAsset/getAssetProof), which serves leaves and Merkle proofs.",
+    },
+    {
+      q: "When is compression the WRONG choice?",
+      options: [
+        "For large NFT collections",
+        "For hot, frequently-mutated state where proof overhead dominates",
+        "For airdrops",
+        "For loyalty points",
+      ],
+      answer: 1,
+      explain: "Compression shines for high-cardinality, rarely-mutated data. For hot state that changes constantly, proof generation overhead outweighs the rent savings.",
+    },
+  ],
+  "lookup-tables": [
+    {
+      q: "What problem do Address Lookup Tables (ALTs) solve?",
+      options: [
+        "Slow RPC calls",
+        "The ~35-account ceiling that the 1232-byte tx limit imposes",
+        "High rent costs",
+        "Validator downtime",
+      ],
+      answer: 1,
+      explain: "Each inline address costs 32 bytes. ALTs let a v0 tx reference addresses by a 1-byte index, raising the practical ceiling to 256 accounts.",
+    },
+    {
+      q: "ALTs only work with which transaction format?",
+      options: ["Legacy transactions", "Versioned (v0) transactions", "Both equally", "Neither"],
+      answer: 1,
+      explain: "Address Lookup Tables require versioned (v0) transactions — legacy txs can't reference them.",
+    },
+    {
+      q: "What's a common ALT mistake?",
+      options: [
+        "Reusing the same table",
+        "Using a freshly-extended table in the same slot before its addresses are active",
+        "Freezing the table",
+        "Adding too few addresses",
+      ],
+      answer: 1,
+      explain: "Newly added addresses need ~1 slot to 'warm up'. Reference them too early and the lookup fails. Reusing a warmed table is exactly the right pattern.",
+    },
+  ],
+  geyser: [
+    {
+      q: "What is a Geyser plugin?",
+      options: [
+        "A wallet extension",
+        "A validator plugin that streams account/transaction/slot data out in real time",
+        "A consensus algorithm",
+        "A type of smart contract",
+      ],
+      answer: 1,
+      explain: "Geyser hooks into the validator's write path and pushes updates (no polling) into sinks like gRPC, Kafka, or Postgres.",
+    },
+    {
+      q: "Why prefer a Geyser stream over polling getProgramAccounts in a loop?",
+      options: [
+        "Polling is illegal",
+        "Streaming is push-based, lower-latency, and gapless — you never miss updates between polls",
+        "Geyser is free and polling costs SOL",
+        "Polling only works on devnet",
+      ],
+      answer: 1,
+      explain: "Polling adds latency and can miss changes between calls, and gets rate-limited at scale. Geyser emits every write as it lands.",
+    },
+    {
+      q: "Which is a popular open-source Geyser streaming interface?",
+      options: ["Yellowstone gRPC", "MetaMask", "Hardhat", "The Graph"],
+      answer: 0,
+      explain: "Yellowstone gRPC is the widely-used Geyser plugin for streaming Solana data; managed webhooks are a simpler abstraction over the same firehose.",
+    },
+  ],
+  accountsdb: [
+    {
+      q: "What's the difference between the Ledger and AccountsDB?",
+      options: [
+        "They're the same store",
+        "The Ledger is append-only history; AccountsDB holds current account state",
+        "AccountsDB stores history; the Ledger stores balances",
+        "Both store only votes",
+      ],
+      answer: 1,
+      explain: "The Ledger (blockstore) is the immutable history of blocks; AccountsDB is the live, mutable current state held largely in memory.",
+    },
+    {
+      q: "What are snapshots used for?",
+      options: [
+        "Backing up private keys",
+        "Letting a new validator bootstrap from recent state instead of replaying genesis",
+        "Storing NFT images",
+        "Encrypting the ledger",
+      ],
+      answer: 1,
+      explain: "Snapshots are compressed dumps of AccountsDB taken periodically. A fresh node downloads a recent one and joins in minutes, not by replaying everything.",
+    },
+    {
+      q: "Why might a normal RPC return null for months-old historical state?",
+      options: [
+        "The state was deleted from the blockchain",
+        "Most nodes prune old ledger; deep history lives on archival/warehouse providers",
+        "Historical state is encrypted",
+        "RPCs only serve devnet",
+      ],
+      answer: 1,
+      explain: "AccountsDB holds current state; old history requires archival nodes. A default RPC often can't serve deep history because it prunes the ledger.",
+    },
+  ],
+  "banking-stage": [
+    {
+      q: "What does the Banking Stage do inside the leader's TPU?",
+      options: [
+        "Signs transactions for users",
+        "Executes verified txs and schedules non-conflicting ones in parallel",
+        "Stores the ledger",
+        "Runs the gossip protocol",
+      ],
+      answer: 1,
+      explain: "Banking Stage is where ordered, verified transactions execute and get packed — the practical realization of Sealevel's parallelism.",
+    },
+    {
+      q: "What did the 2024 'central scheduler' improve?",
+      options: [
+        "It removed transaction fees",
+        "It builds a conflict graph for better throughput and fairer inclusion than the old thread-per-lane model",
+        "It deleted the mempool",
+        "It added staking rewards",
+      ],
+      answer: 1,
+      explain: "The central scheduler reasons about account-write conflicts globally, raising effective throughput and making inclusion fairer under load.",
+    },
+    {
+      q: "Why can many transactions touching one hot account bottleneck here?",
+      options: [
+        "Reads always serialize",
+        "Conflicting writes to the same account must serialize, defeating parallelism",
+        "The scheduler ignores priority fees",
+        "Hot accounts are banned",
+      ],
+      answer: 1,
+      explain: "Two txs writing the same account conflict and must run sequentially. Spreading writes across accounts (e.g. per-user PDAs) lets the scheduler fan out.",
+    },
+  ],
+  jito: [
+    {
+      q: "What is a Jito 'bundle'?",
+      options: [
+        "A batch of NFTs",
+        "Up to 5 transactions that execute atomically and in order, all-or-nothing",
+        "A staking pool",
+        "A type of validator",
+      ],
+      answer: 1,
+      explain: "A bundle is an ordered group of txs (max 5) that land atomically — perfect for risk-free arbitrage, backruns, and liquidations.",
+    },
+    {
+      q: "How do searchers win placement for their bundle?",
+      options: [
+        "First-come, first-served",
+        "By bidding 'tips' in an off-chain auction run by the Block Engine",
+        "By having the most SOL staked",
+        "By calling the leader directly",
+      ],
+      answer: 1,
+      explain: "Jito's Block Engine runs a sealed off-chain auction; the highest tip wins block placement. There's no public mempool to snipe.",
+    },
+    {
+      q: "How do Jito tips differ from priority fees?",
+      options: [
+        "They're identical",
+        "Tips are per-bundle auction bids; priority fees are per-tx, protocol-level",
+        "Tips are paid in ETH",
+        "Priority fees only exist on Jito",
+      ],
+      answer: 1,
+      explain: "Priority fees are a protocol-level per-CU bid; Jito tips are a separate per-bundle bid paid to a tip account to win the auction.",
+    },
+  ],
+  "local-fee-markets": [
+    {
+      q: "What makes Solana's fee market 'local'?",
+      options: [
+        "Fees are set by geography",
+        "Congestion on one hot account only raises fees for txs touching that account",
+        "Each city has its own fee",
+        "Fees are free locally",
+      ],
+      answer: 1,
+      explain: "Because txs declare account access up front, the scheduler prices contention per-account — a hot mint doesn't tax unrelated transactions.",
+    },
+    {
+      q: "How should you estimate priority fees given local markets?",
+      options: [
+        "Use one global network average",
+        "Estimate against the specific accounts your tx will write",
+        "Always pay the maximum",
+        "Fees can't be estimated",
+      ],
+      answer: 1,
+      explain: "getRecentPrioritizationFees is keyed to the accounts you pass. Price against your tx's actual writable accounts, not a network-wide number.",
+    },
+    {
+      q: "How does this contrast with Ethereum's fee market?",
+      options: [
+        "It's identical",
+        "Ethereum has a single global base fee that rises for everyone; Solana contains spikes to contended accounts",
+        "Solana has no fees",
+        "Ethereum prices per-account too",
+      ],
+      answer: 1,
+      explain: "On a global market, one viral mint makes every tx expensive. Local fee markets confine that blast radius to the accounts actually being fought over.",
+    },
+  ],
 };
 
 // ─── LLM seam ────────────────────────────────────────────────────────────────
@@ -678,13 +1244,17 @@ export interface ConceptForQuiz {
 }
 export async function generateQuiz(
   concept: ConceptForQuiz,
-  count = 5
+  count = 5,
+  timeoutMs = 5500
 ): Promise<{ questions: QuizQuestion[]; source: "llm" | "bank" }> {
   const fallback = { questions: getQuiz(concept.id), source: "bank" as const };
+  const controller = new AbortController();
+  const timer = globalThis.setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch("/api/quiz", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
       body: JSON.stringify({
         title: concept.title,
         desc: concept.desc,
@@ -701,6 +1271,8 @@ export async function generateQuiz(
     return { questions: qs, source: "llm" };
   } catch {
     return fallback;
+  } finally {
+    globalThis.clearTimeout(timer);
   }
 }
 

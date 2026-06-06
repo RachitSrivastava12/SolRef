@@ -52,27 +52,30 @@ const GROUPS: { title: string; links: { label: string; url: string; desc: string
 export default function Resources() {
   return (
     <Layout>
-      <div className="aurora" />
       <div className="shell" style={{ position: "relative", zIndex: 1, paddingTop: 56 }}>
-        <div className="eyebrow reveal">Resources</div>
-        <h1 className="reveal" style={{ fontSize: 42, fontWeight: 800, margin: "10px 0 12px", letterSpacing: "-.025em", animationDelay: ".05s" }}>
-          The whole <span className="grad-text">ecosystem</span>, curated
-        </h1>
-        <p className="reveal" style={{ fontSize: 17, color: "var(--text-mid)", maxWidth: 600, marginBottom: 40, animationDelay: ".1s" }}>
-          The links worth bookmarking — official docs, frameworks, infra, explorers, and the deep reading that actually moves you forward.
-        </p>
+        <div className="page-heading">
+          <div className="eyebrow reveal">Resources</div>
+          <h1 className="page-title reveal" style={{ animationDelay: ".05s" }}>Ecosystem index.</h1>
+          <p className="page-subtitle reveal" style={{ animationDelay: ".1s" }}>
+            Official references, frameworks, infra, explorers, and deep technical reading worth keeping open.
+          </p>
+        </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 40, paddingBottom: 20 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 34, paddingBottom: 20 }}>
           {GROUPS.map((g) => (
             <div key={g.title}>
-              <h2 style={{ fontSize: 14, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: ".15em", color: "var(--text-dim)", marginBottom: 16 }}>{g.title}</h2>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px,1fr))", gap: 12 }}>
+              <h2 className="eyebrow" style={{ marginBottom: 12 }}>{g.title}</h2>
+              <div className="doc-list">
                 {g.links.map((l) => (
-                  <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer" className="card card-lift" style={{ padding: 18, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                    <span>
-                      <span style={{ display: "block", fontSize: 14.5, fontWeight: 600 }}>{l.label}</span>
-                      <span style={{ display: "block", fontSize: 12.5, color: "var(--text-dim)", marginTop: 3 }}>{l.desc}</span>
-                    </span>
+                  <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer" className="doc-row">
+                    <span className="doc-row__icon"><ExternalLink size={16} /></span>
+                    <div>
+                      <div className="doc-row__title">
+                        <strong>{l.label}</strong>
+                        <span>{g.title}</span>
+                      </div>
+                      <p>{l.desc}</p>
+                    </div>
                     <ExternalLink size={15} style={{ color: "var(--text-dim)", flexShrink: 0 }} />
                   </a>
                 ))}

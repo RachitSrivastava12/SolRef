@@ -1,52 +1,94 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { ArrowRight, AlertTriangle, Sparkles } from "lucide-react";
 import Layout from "../components/Layout";
+import DocsNav from "../components/DocsNav";
 import { concepts, categories, metaFor, iconFor, levelMeta } from "../lib/concepts";
 
+const GROUPS = categories.filter((c) => c !== "All");
+
+function ConceptRow({ title, tag }: { title: string; tag?: string }) {
+  void tag;
+  const c = concepts.find((x) => x.title === title)!;
+  const m = metaFor(c.title);
+  return (
+    <Link to={`/docs/${m.id}`} className="doc-row">
+      <span className="doc-row__icon">{iconFor(c.icon)}</span>
+      <div>
+        <div className="doc-row__title">
+          <strong>{c.title}</strong>
+          <span>{levelMeta[m.level].label}</span>
+        </div>
+        <p>{c.desc}</p>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        {c.commonMistakes?.length > 0 && (
+          <span className="doc-muted" style={{ display: "inline-flex", alignItems: "center", gap: 5, color: "var(--sol-yellow)" }}>
+            <AlertTriangle size={12} /> {c.commonMistakes.length}
+          </span>
+        )}
+        <span className="doc-muted" style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><Sparkles size={12} /> quiz</span>
+        <ArrowRight size={14} style={{ color: "var(--text-dim)" }} />
+      </div>
+    </Link>
+  );
+}
+
 export default function DocsIndex() {
-  const [cat, setCat] = useState("All");
-  const list = cat === "All" ? concepts : concepts.filter((c) => c.tag === cat);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const catParam = searchParams.get("cat");
+  const cat = catParam && categories.includes(catParam) ? catParam : "All";
+  const setCat = (next: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (next === "All") params.delete("cat");
+    else params.set("cat", next);
+    setSearchParams(params, { replace: true });
+  };
+
+  const groupsToShow = cat === "All" ? GROUPS : [cat];
 
   return (
-    <Layout>
-      <div className="aurora" />
-      <div className="shell" style={{ paddingTop: 56, position: "relative", zIndex: 1 }}>
-        <div className="eyebrow reveal">Documentation</div>
-        <h1 className="reveal" style={{ fontSize: 42, fontWeight: 800, margin: "10px 0 12px", letterSpacing: "-.025em", animationDelay: ".05s" }}>
-          The full Solana <span className="grad-text">infrastructure</span> reference
-        </h1>
-        <p className="reveal" style={{ fontSize: 17, color: "var(--text-mid)", maxWidth: 620, animationDelay: ".1s" }}>
-          {concepts.length} concepts, each its own deep page — diagram, production code, the gotchas that bite, and a quiz to lock it in.
-        </p>
+    <Layout wide>
+      <div className="docs-shell" style={{ position: "relative", zIndex: 1 }}>
+        <aside className="docs-nav">
+          <DocsNav activeId="__overview" />
+        </aside>
 
-        <div className="reveal" style={{ display: "flex", flexWrap: "wrap", gap: 8, margin: "32px 0 28px", animationDelay: ".15s" }}>
-          {categories.map((c) => (
-            <button key={c} className={`pill ${cat === c ? "on" : ""}`} onClick={() => setCat(c)}>{c}</button>
-          ))}
-        </div>
+        <div className="docs-content">
+          <div className="crumb" style={{ marginBottom: 18 }}>
+            <span style={{ color: "var(--text-mid)" }}>Documentation</span>
+          </div>
+          <h1 className="page-title reveal" style={{ marginTop: 0 }}>Solana internals, organized.</h1>
+          <p className="page-subtitle reveal" style={{ animationDelay: ".05s", marginBottom: 28 }}>
+            {concepts.length} focused references across the frontier, runtime, consensus, networking, programs, and economics —
+            each with diagrams, runnable code, and the gotchas.
+          </p>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 15, paddingBottom: 20 }}>
-          {list.map((c) => {
-            const m = metaFor(c.title);
+          {/* domain filter chips */}
+          <div className="reveal" style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 38, animationDelay: ".1s" }}>
+            {categories.map((c) => (
+              <button key={c} onClick={() => setCat(c)} className={`pill ${cat === c ? "on" : ""}`}>
+                <span>{c}</span>
+                <span style={{ opacity: .6 }}>{c === "All" ? concepts.length : concepts.filter((x) => x.tag === c).length}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* grouped sections */}
+          {groupsToShow.map((group) => {
+            const items = concepts.filter((c) => c.tag === group);
+            if (items.length === 0) return null;
             return (
-              <Link key={m.id} to={`/docs/${m.id}`} className="card card-lift" style={{ padding: 22, display: "flex", flexDirection: "column" }}>
-                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 14 }}>
-                  <span style={{ width: 40, height: 40, borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text)", background: "var(--surface-2)" }}>{iconFor(c.icon)}</span>
-                  <span style={{ fontSize: 11, fontFamily: "var(--font-mono)", padding: "3px 9px", borderRadius: 99, border: "1px solid var(--line-2)", color: levelMeta[m.level].color }}>{levelMeta[m.level].label}</span>
+              <section key={group} id={group} style={{ marginBottom: 44, scrollMarginTop: "calc(var(--nav-h) + 8px)" }}>
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 14, gap: 12 }}>
+                  <h2 style={{ fontSize: 18, fontWeight: 650, letterSpacing: "-0.02em" }}>
+                    {group === "Frontier" && <span style={{ color: "var(--neon-green)" }}>● </span>}{group}
+                  </h2>
+                  <span className="doc-muted">{items.length} {items.length === 1 ? "page" : "pages"}</span>
                 </div>
-                <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 8 }}>{c.title}</h3>
-                <p style={{ fontSize: 13, color: "var(--text-dim)", lineHeight: 1.55, flex: 1, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{c.desc}</p>
-                <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 16, fontSize: 12 }}>
-                  {c.commonMistakes?.length > 0 && (
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, color: "var(--sol-yellow)" }}>
-                      <AlertTriangle size={12} /> {c.commonMistakes.length} gotchas
-                    </span>
-                  )}
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 5, color: "var(--text)" }}><Sparkles size={12} /> quiz</span>
-                  <ArrowRight size={14} style={{ color: "var(--text-dim)", marginLeft: "auto" }} />
+                <div className="doc-list">
+                  {items.map((c) => <ConceptRow key={c.title} title={c.title} />)}
                 </div>
-              </Link>
+              </section>
             );
           })}
         </div>

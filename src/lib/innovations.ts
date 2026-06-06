@@ -11,6 +11,7 @@ export interface Innovation {
   summary: string;         // deep-dive paragraph, grounded
   conceptId?: string;      // link to a /docs/:id page if we have one
   legacy?: boolean;        // mark superseded/partial designs
+  frontier?: boolean;      // 2024-2025 breakthrough, shipping now
   accent: "purple" | "green" | "blue";
 }
 
@@ -85,6 +86,36 @@ export const innovations: Innovation[] = [
     legacy: true,
     accent: "green",
   },
+  {
+    name: "Alpenglow",
+    icon: "Zap",
+    mechanism: "Votor (BLS) + Rotor",
+    impact: "Retires Tower BFT/PoH voting; ~150ms finality",
+    summary: "Alpenglow is Solana's largest-ever consensus change, approved by 98% of voting stake in 2025. Votor replaces on-chain vote transactions with off-chain BLS-aggregated certificates, and Rotor supersedes Turbine's multi-hop tree with a flatter single-relay broadcast. Finality drops from ~12.8s to roughly 100-150ms, while removing the network's single biggest source of ledger bloat.",
+    conceptId: "alpenglow",
+    frontier: true,
+    accent: "green",
+  },
+  {
+    name: "Firedancer",
+    icon: "Flame",
+    mechanism: "Independent C client",
+    impact: "Client diversity; 600k+ TPS demonstrated",
+    summary: "Firedancer is a from-scratch validator client written in C by Jump Crypto, independent of the Rust Agave client. A second implementation means a consensus bug in one client can't halt the chain. With kernel-bypass networking and a tile-based architecture, it raises the performance ceiling on the path toward 1M TPS — the hybrid Frankendancer already runs a meaningful share of stake.",
+    conceptId: "firedancer",
+    frontier: true,
+    accent: "blue",
+  },
+  {
+    name: "DoubleZero",
+    icon: "Globe",
+    mechanism: "Dedicated fiber + multicast",
+    impact: "Up to ~50% lower consensus latency",
+    summary: "DoubleZero is a private fiber network for validators — a 'Network Layer 1' that bypasses the public internet for consensus traffic. FPGAs filter and deduplicate at line rate while multicast broadcasts each block to all validators at once instead of relaying hop-by-hop. Mainnet-beta launched in 2025 with a large share of staked SOL connected, complementing Alpenglow's faster finality.",
+    conceptId: "doublezero",
+    frontier: true,
+    accent: "purple",
+  },
 ];
 
 // Transaction lifecycle — six steps with triggers (grounded in the spec).
@@ -106,7 +137,7 @@ export interface TxState {
   label: string; definition: string; ux: string; color: string;
 }
 export const txStates: TxState[] = [
-  { key: "processed", label: "Processed", definition: "Leader processed the tx; not yet voted on. Susceptible to rollbacks.", ux: "Only for real-time optimistic UI feedback — never release funds.", color: "var(--sol-purple)" },
+  { key: "processed", label: "Processed", definition: "Leader processed the tx; not yet voted on. Susceptible to rollbacks.", ux: "Only for real-time optimistic UI feedback — never release funds.", color: "var(--text-mid)" },
   { key: "confirmed", label: "Confirmed", definition: "2/3+ of stake has voted on the block.", ux: "Safe for NFT mints, swaps, and ~99% of app actions.", color: "var(--sol-green)" },
   { key: "finalized", label: "Finalized", definition: "Block rooted after 32 consecutive votes — mathematically irreversible.", ux: "Required for high-value OTC, bridging, and cross-chain settlement.", color: "var(--sol-blue)" },
 ];
