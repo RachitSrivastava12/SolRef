@@ -97,12 +97,12 @@ export default function Landing() {
       <section className="shell" style={{ paddingTop: 74 }}>
         <div className="landing-head landing-head--compact" style={{ marginTop: 0 }}>
           <div>
-            <div className="eyebrow">Core spine</div>
+            <div className="eyebrow">The hot path</div>
             <h2>One transaction, end to end.</h2>
           </div>
           <p>
-            The product now has a stronger reading order: ingress, scheduling, execution, state writes, and propagation.
-            This keeps the reference broad while giving protocol-internals readers a direct route.
+            Follow a single transaction from the moment it reaches a validator to the moment its state is committed —
+            ingress, scheduling, execution, state writes, and propagation, in order.
           </p>
         </div>
         <div className="hot-path">

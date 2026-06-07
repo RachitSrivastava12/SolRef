@@ -38,8 +38,8 @@ export default function DeepDives() {
           <div className="eyebrow reveal">Deep dives</div>
           <h1 className="page-title reveal deep-page-title" style={{ animationDelay: ".05s" }}>Few paths, real depth.</h1>
           <p className="page-subtitle reveal deep-page-subtitle" style={{ animationDelay: ".1s" }}>
-            A curated route through Solana internals for readers who want the validator hot path,
-            consensus/finality, runtime, state, and frontier work without getting lost in a flat docs list.
+            Curated routes through Solana internals — the validator hot path, consensus and finality, the runtime,
+            state, and the 2025 frontier — each read in an order that builds on itself.
           </p>
         </div>
 
@@ -50,8 +50,8 @@ export default function DeepDives() {
               <h2>Follow one transaction through the machine.</h2>
             </div>
             <p>
-              The Engineering Solana framing is the useful one: learn the exact handoffs from ingress to execution,
-              state writes, and broadcast. The stages below are the spine for the rest of the product.
+              Learn the exact handoffs a transaction makes — from network ingress through execution and state writes
+              to broadcast. Each stage links to its full page.
             </p>
           </div>
 
@@ -78,7 +78,7 @@ export default function DeepDives() {
               <h2>Start with the three tracks that explain most of Solana.</h2>
             </div>
             <p>
-              These keep the older docs intact, but give a serious reader a better first path than clicking random topics.
+              Start with these three — together they explain most of how Solana works, then branch into the rest.
             </p>
           </div>
           <div className="chapter-grid">
@@ -130,10 +130,10 @@ export default function DeepDives() {
         <section className="landing-section landing-section--last">
           <div className="grad-border" style={{ borderRadius: 8, padding: 24, display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 18, alignItems: "center" }}>
             <div>
-              <div className="eyebrow" style={{ marginBottom: 8 }}>Knowledge base upgrade</div>
-              <h2 style={{ fontSize: 24, lineHeight: 1.14, letterSpacing: 0, marginBottom: 8 }}>Depth lives inside the pages, not in extra surfaces.</h2>
+              <div className="eyebrow" style={{ marginBottom: 8 }}>Go deeper</div>
+              <h2 style={{ fontSize: 24, lineHeight: 1.14, letterSpacing: 0, marginBottom: 8 }}>The depth is inside the pages.</h2>
               <p style={{ color: "var(--text-mid)", fontSize: 14.5, lineHeight: 1.68, maxWidth: 720 }}>
-                PoH, Tower, Alpenglow, Banking Stage, SVM, AccountsDB, and QUIC/SWQoS now carry deeper chapter context and source-backed notes.
+                Proof of History, Tower BFT, Alpenglow, the Banking Stage, the SVM, AccountsDB, and QUIC/SWQoS each carry a full deep dive — the mental model, the mechanism, and the why.
               </p>
             </div>
             <Link to="/docs/proof-of-history" className="btn btn-grad">

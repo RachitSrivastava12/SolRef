@@ -2289,7 +2289,7 @@ await conn.confirmTransaction(sig, "finalized"); // slow today
     icon: "Flame",
     tag: "Frontier",
     title: "Firedancer & Validator Clients",
-    desc: "Firedancer is Jump Crypto's independent Solana validator client project, written in C. Frankendancer is the production bridge: Firedancer's high-performance networking path paired with the Agave runtime and consensus. Full Firedancer is still being hardened separately, which is exactly why this page treats client diversity, performance, and rollout status as different topics.",
+    desc: "Firedancer is Jump Crypto's independent Solana validator client project, written in C. Frankendancer is the production bridge: Firedancer's high-performance networking path paired with the Agave runtime and consensus. Full Firedancer is still being hardened separately — so client diversity, raw performance, and rollout status are best understood as three distinct things, not one.",
     details: [
       "Agave (Rust): the reference client, formerly 'solana-labs', now maintained by Anza",
       "Frankendancer: Firedancer's networking stack with Agave runtime/consensus integration",

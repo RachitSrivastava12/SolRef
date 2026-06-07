@@ -21,7 +21,7 @@ export const chapters: Chapter[] = [
     conceptIds: ["transactions", "quic-swqos", "gulf-stream", "tx-lifecycle", "banking-stage", "svm-bytecode", "accountsdb", "turbine"],
     checkpoints: ["Where packets enter the leader", "How conflicts are scheduled", "Where state is mutated", "Why confirmation is separate from send"],
     sourceNotes: [
-      "Engineering Solana frames this as the validator hot path: QUIC ingress to committed state, not a loose topic list.",
+      "Engineering Solana frames this as the validator hot path: one transaction's journey from QUIC ingress to committed state.",
       "The deepest learning value is the handoff between TPU, Banking Stage, SVM, Bank, and AccountsDB.",
     ],
   },

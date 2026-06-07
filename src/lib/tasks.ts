@@ -769,7 +769,7 @@ function breakeven(commissionRate, epochInflationPerStake) {
       hints: [
         "Votor is about validator votes becoming aggregated certificates.",
         "Rotor is about data dissemination / block propagation, not voting rules.",
-        "The product impact of Votor is finality latency and vote overhead; Rotor is a networking/propagation path.",
+        "Votor's impact is finality latency and vote overhead; Rotor is a networking/propagation path.",
       ],
       criteria: "Correctly distinguishes Votor from Rotor, ties Votor to off-chain vote aggregation/finality, ties Rotor to data dissemination, and warns against treating both as one activated feature.",
     },
