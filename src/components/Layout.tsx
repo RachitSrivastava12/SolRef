@@ -1,17 +1,20 @@
 import { useState, useEffect, useRef, useMemo, type CSSProperties, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Search, Command, Menu, X, ArrowRight, ExternalLink } from "lucide-react";
+import { Search, Command, Menu, X, ArrowRight, ExternalLink, Globe } from "lucide-react";
 import { Wordmark, SolanaMark } from "./Brand";
 import { concepts, metaFor, levelMeta, iconFor } from "../lib/concepts";
+import { searchConcepts, type SearchEntry } from "../lib/searchIndex";
+import ChatWidget from "./ChatWidget";
 
 const NAV = [
   { to: "/innovations", label: "Innovations" },
+  { to: "/deep-dives", label: "Deep Dives" },
   { to: "/docs", label: "Docs" },
-  { to: "/lifecycle", label: "Lifecycle" },
-  { to: "/learn", label: "Learn" },
   { to: "/workspace", label: "Workspace" },
   { to: "/quizzes", label: "Quizzes" },
 ];
+
+type Hit = { kind: "concept"; e: SearchEntry } | { kind: "web"; url: string; label: string };
 
 function CommandSearch({ onClose }: { onClose: () => void }) {
   const [q, setQ] = useState("");
@@ -20,19 +23,19 @@ function CommandSearch({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
   useEffect(() => { inputRef.current?.focus(); }, []);
 
-  const results = useMemo(() => {
-    const t = q.trim().toLowerCase();
-    if (!t) return concepts.slice(0, 7);
-    return concepts.filter((c) =>
-      c.title.toLowerCase().includes(t) || c.desc.toLowerCase().includes(t) ||
-      c.tag.toLowerCase().includes(t) || c.details.some((d) => d.toLowerCase().includes(t))
-    ).slice(0, 9);
+  const results = useMemo<Hit[]>(() => {
+    const t = q.trim();
+    const entries = searchConcepts(t, t ? 8 : 7);
+    const hits: Hit[] = entries.map((e) => ({ kind: "concept", e }));
+    if (t) hits.push({ kind: "web", url: `https://www.google.com/search?q=${encodeURIComponent(`${t} solana`)}`, label: t });
+    return hits;
   }, [q]);
   useEffect(() => { setActive(0); }, [q]);
 
   const pick = (i: number) => {
-    const c = results[i]; if (!c) return;
-    navigate(`/docs/${metaFor(c.title).id}`); onClose();
+    const r = results[i]; if (!r) return;
+    if (r.kind === "web") { window.open(r.url, "_blank", "noopener,noreferrer"); onClose(); return; }
+    navigate(`/docs/${r.e.id}`); onClose();
   };
   const onKey = (e: React.KeyboardEvent) => {
     if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => Math.min(a + 1, results.length - 1)); }
@@ -40,22 +43,42 @@ function CommandSearch({ onClose }: { onClose: () => void }) {
     else if (e.key === "Enter") pick(active);
   };
 
+  const conceptCount = results.filter((r) => r.kind === "concept").length;
+
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 80, display: "flex", justifyContent: "center", alignItems: "flex-start", padding: "12vh 18px 0", background: "rgba(0,0,0,.72)", backdropFilter: "blur(10px)", animation: "fadeIn .12s" }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 640, overflow: "hidden", animation: "scaleIn .14s", boxShadow: "0 24px 90px rgba(0,0,0,.46)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderBottom: "1px solid var(--line)", background: "var(--bg)" }}>
           <Search size={17} style={{ color: "var(--text-dim)" }} />
           <input ref={inputRef} value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onKey}
-            placeholder={`Search ${concepts.length} concepts — Alpenglow, Firedancer, PDAs, fees…`}
+            placeholder={`Search anything Solana — "how do fees work", PDAs, frontrunning, rent…`}
             style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "var(--text)", fontSize: 15, fontFamily: "var(--font-display)" }} />
           <kbd>ESC</kbd>
         </div>
-        <div style={{ maxHeight: 420, overflowY: "auto", padding: 8 }}>
-          {results.length === 0 && <div style={{ padding: "28px", textAlign: "center", color: "var(--text-dim)", fontSize: 14 }}>No matches.</div>}
-          {results.map((c, i) => {
+        <div style={{ maxHeight: 440, overflowY: "auto", padding: 8 }}>
+          {q.trim() && conceptCount === 0 && (
+            <div style={{ padding: "14px 12px 6px", color: "var(--text-dim)", fontSize: 12.5, fontFamily: "var(--font-mono)" }}>
+              No concept page for that yet — search the open web instead:
+            </div>
+          )}
+          {results.map((r, i) => {
+            if (r.kind === "web") {
+              return (
+                <button key="web" onMouseEnter={() => setActive(i)} onClick={() => pick(i)}
+                  style={{ width: "100%", minHeight: 54, display: "flex", alignItems: "center", gap: 13, padding: "10px 12px", borderRadius: 8, border: "1px solid transparent", textAlign: "left", background: i === active ? "var(--surface-2)" : "transparent", color: "var(--text)", transition: "background .12s var(--ease-out)", marginTop: conceptCount > 0 ? 6 : 0, borderTop: conceptCount > 0 ? "1px solid var(--line)" : "none" }}>
+                  <span style={{ width: 30, height: 30, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--neon-green)", background: "var(--surface-3)", flexShrink: 0 }}><Globe size={16} /></span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: "block", fontSize: 14, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Search the web for “{r.label}”</span>
+                    <span style={{ display: "block", fontSize: 12, color: "var(--text-dim)" }}>Opens Google, scoped to Solana</span>
+                  </span>
+                  <ExternalLink size={15} style={{ color: i === active ? "var(--neon-green)" : "var(--text-dim)", flexShrink: 0 }} />
+                </button>
+              );
+            }
+            const c = r.e.c;
             const m = metaFor(c.title);
             return (
-              <button key={m.id} onMouseEnter={() => setActive(i)} onClick={() => pick(i)}
+              <button key={r.e.id} onMouseEnter={() => setActive(i)} onClick={() => pick(i)}
                 style={{ width: "100%", minHeight: 54, display: "flex", alignItems: "center", gap: 13, padding: "10px 12px", borderRadius: 8, border: "1px solid transparent", textAlign: "left", background: i === active ? "var(--surface-2)" : "transparent", color: "var(--text)", transition: "background .12s var(--ease-out), border-color .12s var(--ease-out)" }}>
                 <span style={{ width: 30, height: 30, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text)", background: "var(--surface-3)", flexShrink: 0 }}>{iconFor(c.icon)}</span>
                 <span style={{ flex: 1, minWidth: 0 }}>
@@ -184,7 +207,7 @@ export default function Layout({ children, wide }: { children: ReactNode; wide?:
               </p>
             </div>
             <div style={{ display: "flex", gap: 56, flexWrap: "wrap" }}>
-              <FootCol title="Learn" links={[["Docs", "/docs"], ["Learning path", "/learn"], ["Quizzes", "/quizzes"], ["Workspace", "/workspace"]]} />
+              <FootCol title="Learn" links={[["Deep dives", "/deep-dives"], ["Docs", "/docs"], ["Learning path", "/learn"], ["Quizzes", "/quizzes"], ["Workspace", "/workspace"]]} />
               <FootCol title="Build" links={[["Solana Playground", "https://beta.solpg.io"], ["Solana Docs", "https://docs.solana.com"], ["Anchor", "https://www.anchor-lang.com"], ["Cookbook", "https://solanacookbook.com"]]} ext />
             </div>
           </div>
@@ -198,6 +221,8 @@ export default function Layout({ children, wide }: { children: ReactNode; wide?:
       </footer>
 
       {searchOpen && <CommandSearch onClose={() => setSearchOpen(false)} />}
+
+      <ChatWidget />
 
       <style>{`
         .nav-link:hover { color: var(--text) !important; background: var(--surface-2); }

@@ -3,14 +3,15 @@ import { ArrowRight, ExternalLink, BookOpen, GraduationCap, Terminal, Sparkles }
 import { useState, useEffect } from "react";
 import Layout from "../components/Layout";
 import RaysHero from "../components/RaysHero";
-import { concepts, metaFor, iconFor, levelMeta } from "../lib/concepts";
+import { concepts, conceptById, metaFor, iconFor, levelMeta } from "../lib/concepts";
 import { innovations } from "../lib/innovations";
+import { chapters, hotPathStages } from "../lib/chapters";
 
 const RPC = (import.meta.env.VITE_SOLANA_RPC as string) || "https://api.mainnet-beta.solana.com";
 
 const PILLARS = [
-  { to: "/innovations", icon: <Sparkles size={18} />, label: "Architecture", title: `${innovations.length} innovations`, desc: "The protocol mechanisms behind Solana throughput." },
-  { to: "/docs", icon: <BookOpen size={18} />, label: "Reference", title: `${concepts.length} concepts`, desc: "Focused pages with diagrams, code, and gotchas." },
+  { to: "/deep-dives", icon: <BookOpen size={18} />, label: "Depth", title: `${chapters.length} study tracks`, desc: "A curated path through the validator hot path and core internals." },
+  { to: "/innovations", icon: <Sparkles size={18} />, label: "Architecture", title: `${innovations.length} innovations`, desc: "The protocol mechanisms and frontier upgrades behind Solana throughput." },
   { to: "/workspace", icon: <Terminal size={18} />, label: "Practice", title: "Workspace", desc: "Tasks, hints, and AI review in a real editor." },
   { to: "/quizzes", icon: <GraduationCap size={18} />, label: "Recall", title: "Quizzes", desc: "Instant docs-grounded checks for each concept." },
 ];
@@ -59,15 +60,13 @@ function useLiveTps() {
 
 export default function Landing() {
   const { tps, epoch } = useLiveTps();
-  const featured = ["proof-of-history", "turbine", "mev", "pda", "sealevel", "gulf-stream"]
+  const featured = ["proof-of-history", "tower-bft", "alpenglow", "banking-stage", "svm-bytecode", "accountsdb"]
     .map((id) => concepts.find((c) => metaFor(c.title).id === id)).filter(Boolean) as typeof concepts;
 
   return (
     <Layout>
-      {/* FULL-SCREEN RAYS HERO */}
       <RaysHero />
 
-      {/* live network strip (quiet, below the fold) */}
       {tps && (
         <div className="shell" style={{ position: "relative", zIndex: 1, paddingTop: 8, paddingBottom: 8 }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 9, fontSize: 12.5, color: "var(--text-mid)", fontFamily: "var(--font-mono)" }}>
@@ -77,11 +76,9 @@ export default function Landing() {
         </div>
       )}
 
-      {/* PILLARS — four product surfaces, NotebookLM-style */}
       <section id="surfaces" className="shell" style={{ paddingTop: 30, scrollMarginTop: 96 }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 10 }}>
-          {PILLARS.map((p, i) => {
-            return (
+          {PILLARS.map((p, i) => (
             <Link key={p.to} to={p.to} className="card card-lift reveal" style={{ padding: 20, display: "block", animationDelay: `${.04 * i}s` }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
                 <span style={{ width: 38, height: 38, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--neon-green)", background: "var(--surface-2)", border: "1px solid var(--line)" }}>{p.icon}</span>
@@ -93,19 +90,44 @@ export default function Landing() {
                 Open <ArrowRight size={13} />
               </div>
             </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="shell" style={{ paddingTop: 74 }}>
+        <div className="landing-head landing-head--compact" style={{ marginTop: 0 }}>
+          <div>
+            <div className="eyebrow">Core spine</div>
+            <h2>One transaction, end to end.</h2>
+          </div>
+          <p>
+            The product now has a stronger reading order: ingress, scheduling, execution, state writes, and propagation.
+            This keeps the reference broad while giving protocol-internals readers a direct route.
+          </p>
+        </div>
+        <div className="hot-path">
+          {hotPathStages.map((stage, i) => {
+            const concept = conceptById(stage.conceptId);
+            const meta = concept ? metaFor(concept.title) : null;
+            return (
+              <Link key={stage.label} to={meta ? `/docs/${meta.id}` : "/deep-dives"} className="hot-path__stage">
+                <span className="hot-path__num">0{i + 1}</span>
+                <strong>{stage.label}</strong>
+                <em>{stage.detail}</em>
+                <small>{concept?.tag ?? "Track"}</small>
+              </Link>
             );
           })}
         </div>
       </section>
 
-      {/* FEATURED CONCEPTS */}
       <section className="shell" style={{ paddingTop: 76 }}>
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 26, flexWrap: "wrap", gap: 12 }}>
           <div>
             <div className="eyebrow">Start here</div>
-            <h2 className="section-title" style={{ marginTop: 8 }}>Most-read internals</h2>
+            <h2 className="section-title" style={{ marginTop: 8 }}>Internals worth studying properly</h2>
           </div>
-          <Link to="/docs" style={{ fontSize: 14, color: "var(--text-mid)", display: "inline-flex", alignItems: "center", gap: 6 }}>See all {concepts.length} <ArrowRight size={14} /></Link>
+          <Link to="/deep-dives" style={{ fontSize: 14, color: "var(--text-mid)", display: "inline-flex", alignItems: "center", gap: 6 }}>Open deep dives <ArrowRight size={14} /></Link>
         </div>
         <div className="doc-list">
           {featured.map((c, i) => {
@@ -127,24 +149,20 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* INTERACTIVE TOOLS */}
       <section className="shell" style={{ paddingTop: 72 }}>
         <div className="eyebrow" style={{ marginBottom: 8 }}>Interactive</div>
         <h2 className="section-title" style={{ marginBottom: 26 }}>Small labs</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px,1fr))", gap: 14 }}>
-          {INTERACTIVE.map((t, i) => {
-            return (
+          {INTERACTIVE.map((t) => (
             <Link key={t.to} to={t.to} className="card card-lift" style={{ padding: 20, display: "block", position: "relative", overflow: "hidden", borderColor: "var(--line)" }}>
               <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 8, position: "relative" }}>{t.label}</h3>
               <p style={{ fontSize: 13.5, color: "var(--text-dim)", lineHeight: 1.6, position: "relative" }}>{t.desc}</p>
               <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text)", fontWeight: 650, position: "relative" }}>Try it <ArrowRight size={14} /></div>
             </Link>
-            );
-          })}
+          ))}
         </div>
       </section>
 
-      {/* QUICK LINKS */}
       <section className="shell" style={{ paddingTop: 72 }}>
         <div className="eyebrow" style={{ marginBottom: 8 }}>Essential links</div>
         <h2 className="section-title" style={{ marginBottom: 26 }}>Ecosystem shortcuts</h2>
@@ -161,14 +179,13 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* CTA */}
       <section className="shell" style={{ paddingTop: 56 }}>
         <div className="grad-border" style={{ borderRadius: "var(--r-lg)", padding: "30px 28px", textAlign: "center", overflow: "hidden", position: "relative", maxWidth: 760, margin: "0 auto" }}>
           <div style={{ position: "relative" }}>
             <h2 style={{ fontSize: 24, fontWeight: 750, margin: "0 0 8px", letterSpacing: 0 }}>Start with the path.</h2>
-            <p style={{ color: "var(--text-mid)", fontSize: 14.5, maxWidth: 380, margin: "0 auto 22px" }}>Transactions, accounts, lifecycle, then internals.</p>
+            <p style={{ color: "var(--text-mid)", fontSize: 14.5, maxWidth: 440, margin: "0 auto 22px" }}>Hot path first, then consensus/finality, then runtime and state.</p>
             <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-              <Link to="/learn" className="btn btn-grad">Start the path <ArrowRight size={16} /></Link>
+              <Link to="/deep-dives" className="btn btn-grad">Start deep dives <ArrowRight size={16} /></Link>
               <Link to="/workspace" className="btn btn-ghost">Try the workspace <Terminal size={15} /></Link>
             </div>
           </div>

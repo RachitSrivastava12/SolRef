@@ -659,27 +659,27 @@ export const quizBank: Record<string, QuizQuestion[]> = {
 
   alpenglow: [
     {
-      q: "What two components does Alpenglow introduce to replace Tower BFT and on-chain vote transactions?",
-      options: ["Turbine and Gulf Stream", "Votor and Rotor", "Sealevel and Cloudbreak", "QUIC and SWQoS"],
+      q: "What is the first Alpenglow protocol change focused on?",
+      options: ["Replacing accounts with UTXOs", "Votor: off-chain vote aggregation into certificates", "Launching a new token", "Moving programs to the EVM"],
       answer: 1,
-      explain: "Votor handles voting via off-chain BLS-aggregated certificates; Rotor replaces Turbine's multi-hop tree with a flatter single-relay broadcast.",
+      explain: "The active first step is Votor: validators vote and aggregate signatures into certificates instead of relying on on-chain vote transactions in the hot path.",
     },
     {
-      q: "Roughly what finality does Alpenglow target, versus today's ~12.8s?",
-      options: ["~5 seconds", "~100–150 milliseconds", "~2 seconds", "Instant, zero latency"],
+      q: "What latency property is Alpenglow trying to improve most directly?",
+      options: ["Rent collection", "Finality latency", "PDA derivation speed", "NFT metadata storage"],
       answer: 1,
-      explain: "If ≥80% of stake responds, finality lands in ~100ms; a second round (60–80% participation) still finalizes within ~150–250ms.",
+      explain: "Alpenglow targets the consensus/finality path, especially the time and overhead of validator voting.",
     },
     {
-      q: "What happens to Proof of History under Alpenglow?",
+      q: "How should you treat Rotor when explaining the initial Alpenglow SIMD?",
       options: [
-        "It's deleted entirely",
-        "It remains as an ordering clock but is removed from the voting hot path",
-        "It becomes the consensus mechanism",
-        "It replaces Turbine",
+        "As the first activated Votor change",
+        "As a separate data-dissemination scope in the broader Alpenglow design",
+        "As a wallet feature",
+        "As the name of the fee market",
       ],
       answer: 1,
-      explain: "PoH stays as a cryptographic clock for ordering; Alpenglow just takes it out of the critical voting path and eliminates vote transactions.",
+      explain: "The broader design discusses Rotor, but the active initial SIMD separates Rotor from the Votor consensus change.",
     },
   ],
   firedancer: [
@@ -714,7 +714,18 @@ export const quizBank: Record<string, QuizQuestion[]> = {
         "A testnet-only fork",
       ],
       answer: 1,
-      explain: "Frankendancer combines Firedancer's high-performance networking with Agave's runtime/consensus, and already runs a meaningful share of stake.",
+      explain: "Frankendancer combines Firedancer's high-performance networking with Agave's runtime/consensus, making it the bridge between Agave and the full independent client.",
+    },
+    {
+      q: "Why should full Firedancer and Frankendancer be discussed separately?",
+      options: [
+        "They run on different blockchains",
+        "Frankendancer is the hybrid production bridge; full Firedancer is the independent pure-C validator path still being hardened",
+        "Frankendancer is only a wallet",
+        "Full Firedancer changes SOL tokenomics",
+      ],
+      answer: 1,
+      explain: "Frankendancer is the deployed bridge using Firedancer networking with Agave runtime/consensus; full Firedancer is the deeper independent client rollout.",
     },
   ],
   doublezero: [

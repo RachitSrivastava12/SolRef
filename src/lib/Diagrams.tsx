@@ -40,7 +40,7 @@ function Wrap({ vb = "0 0 640 250", caption, children }: { vb?: string; caption?
 
 type Align = "middle" | "start" | "end";
 const T = (x: number, y: number, s: string, fill = FG, size = 11.5, weight = 600, anchor: Align = "middle") => (
-  <text x={x} y={y} fill={fill} fontSize={size} fontWeight={weight} textAnchor={anchor} style={{ letterSpacing: "-0.01em" }}>{s}</text>
+  <text x={x} y={y} fill={fill} fontSize={size} fontWeight={weight} textAnchor={anchor} style={{ letterSpacing: 0 }}>{s}</text>
 );
 const title = (s: string, x = 320) => T(x, 20, s, MID, 11.5, 600);
 
@@ -52,7 +52,7 @@ function Node({ x, y, w, h, t, sub, accent, color, fill, align = "middle" }:
   return (
     <g>
       <rect x={x} y={y} width={w} height={h} rx="9" fill={fill ?? PANEL} stroke={stroke} strokeWidth={accent || color ? 1.3 : 1} />
-      <text x={tx} y={sub ? y + h / 2 - 3 : y + h / 2 + 4} fill={tcol} fontSize={11.5} fontWeight={700} textAnchor={align} style={{ letterSpacing: "-0.01em" }}>{t}</text>
+      <text x={tx} y={sub ? y + h / 2 - 3 : y + h / 2 + 4} fill={tcol} fontSize={11.5} fontWeight={700} textAnchor={align} style={{ letterSpacing: 0 }}>{t}</text>
       {sub && <text x={tx} y={y + h / 2 + 12} fill={DIM} fontSize={9.5} fontWeight={500} textAnchor={align}>{sub}</text>}
     </g>
   );

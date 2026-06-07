@@ -8,6 +8,8 @@ import Layout from "../components/Layout";
 import DocsNav from "../components/DocsNav";
 import { concepts, conceptById, metaFor, iconFor, levelMeta } from "../lib/concepts";
 import { tasksFor } from "../lib/tasks";
+import { chapterConcepts, chapterForConceptId } from "../lib/chapters";
+import { deepDiveFor } from "../lib/deepDives";
 import ConceptDiagram, { hasDiagram } from "../lib/Diagrams";
 import { useProgress } from "../lib/useProgress";
 
@@ -39,11 +41,15 @@ export default function ConceptPage() {
 
   const m = concept ? metaFor(concept.title) : null;
   const conceptTasks = concept ? tasksFor(m!.id) : [];
+  const deepDive = m ? deepDiveFor(m.id) : undefined;
+  const chapter = m ? chapterForConceptId(m.id) : undefined;
+  const chapterItems = chapter ? chapterConcepts(chapter) : [];
 
   const toc = useMemo(() => {
     if (!concept || !m) return [] as [string, string][];
     return [
       ["overview", "Overview"],
+      deepDive && ["deep", "Deep dive"],
       hasDiagram(m.id) && ["diagram", "Diagram"],
       concept.whyItMatters && ["why", "Why it matters"],
       ["facts", "Key facts"],
@@ -52,7 +58,7 @@ export default function ConceptPage() {
       conceptTasks.length > 0 && ["practice", "Practice"],
       concept.links?.length && ["resources", "Resources"],
     ].filter(Boolean) as [string, string][];
-  }, [concept, m, conceptTasks.length]);
+  }, [concept, m, conceptTasks.length, deepDive]);
 
   const active = useActiveSection(toc.map((t) => t[0]));
 
@@ -112,6 +118,62 @@ export default function ConceptPage() {
 
           <h1 id="overview" className="concept-title" style={{ scrollMarginTop: "calc(var(--nav-h) + 8px)" }}>{concept.title}</h1>
           <p className="doc-lede" style={{ margin: "20px 0 36px", maxWidth: "68ch" }}>{concept.desc}</p>
+
+          {chapter && (
+            <section className="chapter-context" style={{ marginBottom: 34 }}>
+              <div>
+                <span className="eyebrow">Chapter context</span>
+                <h2><Link to={`/deep-dives/${chapter.id}`} style={{ color: "inherit" }}>{chapter.title}</Link></h2>
+                <p>{chapter.outcome}</p>
+              </div>
+              <div className="chapter-context__links">
+                {chapterItems.slice(0, 6).map(({ concept: item, meta }) => (
+                  <Link key={meta.id} to={`/docs/${meta.id}`} className={meta.id === m.id ? "on" : ""}>
+                    {item.title}
+                  </Link>
+                ))}
+                <Link to={`/deep-dives/${chapter.id}`} className="chapter-context__all">
+                  Open track <ArrowRight size={12} />
+                </Link>
+              </div>
+            </section>
+          )}
+
+          {deepDive && (
+            <section id="deep" className="deep-dive" style={{ scrollMarginTop: "calc(var(--nav-h) + 8px)", marginBottom: 42 }}>
+              <div className="deep-dive__thesis">
+                <span className="eyebrow">Deep dive</span>
+                <p>{deepDive.thesis}</p>
+                {deepDive.stages && (
+                  <div className="deep-dive__stages">
+                    {deepDive.stages.map((stage, i) => (
+                      <span key={stage}>{i + 1}. {stage}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {deepDive.sourceNotes?.length ? (
+                <div className="deep-dive__source">
+                  <span className="eyebrow">Engineering Solana lens</span>
+                  <ul>
+                    {deepDive.sourceNotes.map((note) => <li key={note}>{note}</li>)}
+                  </ul>
+                </div>
+              ) : null}
+              <div className="deep-dive__sections">
+                {deepDive.sections.map((section) => (
+                  <article key={section.title}>
+                    <span>{section.eyebrow}</span>
+                    <h3>{section.title}</h3>
+                    <p>{section.body}</p>
+                    <ul>
+                      {section.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}
+                    </ul>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* diagram */}
           {hasDiagram(m.id) && <div id="diagram" style={{ marginBottom: 40, scrollMarginTop: "calc(var(--nav-h) + 8px)" }}><ConceptDiagram id={m.id} /></div>}

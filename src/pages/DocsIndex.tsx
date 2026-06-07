@@ -1,8 +1,9 @@
 import { Link, useSearchParams } from "react-router-dom";
-import { ArrowRight, AlertTriangle, Sparkles } from "lucide-react";
+import { ArrowRight, AlertTriangle, BookOpen, Sparkles } from "lucide-react";
 import Layout from "../components/Layout";
 import DocsNav from "../components/DocsNav";
 import { concepts, categories, metaFor, iconFor, levelMeta } from "../lib/concepts";
+import { chapters, chapterConcepts } from "../lib/chapters";
 
 const GROUPS = categories.filter((c) => c !== "All");
 
@@ -63,7 +64,45 @@ export default function DocsIndex() {
             each with diagrams, runnable code, and the gotchas.
           </p>
 
-          {/* domain filter chips */}
+          <section className="reveal" style={{ marginBottom: 38, animationDelay: ".08s" }}>
+            <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 14, marginBottom: 14 }}>
+              <div>
+                <div className="eyebrow">Deep study tracks</div>
+                <h2 style={{ fontSize: 22, lineHeight: 1.15, letterSpacing: 0, marginTop: 8 }}>Start with the few paths that explain the system.</h2>
+              </div>
+              <Link to="/deep-dives" style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "var(--text-mid)", fontSize: 13.5, flexShrink: 0 }}>
+                All tracks <ArrowRight size={14} />
+              </Link>
+            </div>
+            <div className="chapter-list">
+              {chapters.slice(0, 3).map((chapter, i) => {
+                const refs = chapterConcepts(chapter);
+                const first = refs[0]?.meta.id ?? "";
+                return (
+                  <Link key={chapter.id} to={first ? `/docs/${first}` : "/deep-dives"} className="chapter-row chapter-row--compact">
+                    <div className="chapter-row__meta">
+                      <span>0{i + 1}</span>
+                      <em>{chapter.domain}</em>
+                    </div>
+                    <div className="chapter-row__body">
+                      <h2>{chapter.title}</h2>
+                      <p>{chapter.summary}</p>
+                      <strong>{chapter.outcome}</strong>
+                    </div>
+                    <div className="chapter-row__refs">
+                      <div className="chapter-row__refs-head">
+                        <BookOpen size={13} /> Includes
+                      </div>
+                      <div className="chapter-row__checks">
+                        {refs.slice(0, 4).map(({ concept, meta }) => <span key={meta.id}>{concept.title}</span>)}
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+
           <div className="reveal" style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 38, animationDelay: ".1s" }}>
             {categories.map((c) => (
               <button key={c} onClick={() => setCat(c)} className={`pill ${cat === c ? "on" : ""}`}>
@@ -73,14 +112,13 @@ export default function DocsIndex() {
             ))}
           </div>
 
-          {/* grouped sections */}
           {groupsToShow.map((group) => {
             const items = concepts.filter((c) => c.tag === group);
             if (items.length === 0) return null;
             return (
               <section key={group} id={group} style={{ marginBottom: 44, scrollMarginTop: "calc(var(--nav-h) + 8px)" }}>
                 <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 14, gap: 12 }}>
-                  <h2 style={{ fontSize: 18, fontWeight: 650, letterSpacing: "-0.02em" }}>
+                  <h2 style={{ fontSize: 18, fontWeight: 650, letterSpacing: 0 }}>
                     {group === "Frontier" && <span style={{ color: "var(--neon-green)" }}>● </span>}{group}
                   </h2>
                   <span className="doc-muted">{items.length} {items.length === 1 ? "page" : "pages"}</span>

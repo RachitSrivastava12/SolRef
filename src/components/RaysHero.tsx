@@ -7,14 +7,14 @@ const CX = STAGE_W / 2;
 const CY = 285;
 
 const SPOKES = [
-  { label: "Native 101", to: "/learn", angle: -90 },
-  { label: "Infra", to: "/docs?cat=Core%20Infra", angle: -45 },
-  { label: "Protocol internals", to: "/docs?cat=Consensus", angle: 0 },
-  { label: "Data flow", to: "/docs?cat=Data%20Flow", angle: 45 },
-  { label: "Low level runtime", to: "/docs?cat=System%20Design", angle: 90 },
-  { label: "Program side", to: "/docs?cat=Programs", angle: 135 },
-  { label: "Token economics", to: "/docs?cat=Economics", angle: 180 },
-  { label: "MEV / ordering", to: "/docs?cat=MEV", angle: 225 },
+  { label: "Start here", to: "/learn", angle: -90 },
+  { label: "What's new · 2025", to: "/deep-dives/frontier-2025", angle: -45 },
+  { label: "Consensus & finality", to: "/deep-dives/consensus-finality", angle: 0 },
+  { label: "Programs & the SVM", to: "/deep-dives/runtime-programs", angle: 45 },
+  { label: "Validator internals", to: "/deep-dives/execution-hot-path", angle: 90 },
+  { label: "Networking", to: "/deep-dives/network-propagation", angle: 135 },
+  { label: "State & data", to: "/deep-dives/state-data", angle: 180 },
+  { label: "Fees, MEV & roadmap", to: "/deep-dives/fees-mev-roadmap", angle: 225 },
 ];
 
 export default function RaysHero() {
@@ -282,6 +282,13 @@ export default function RaysHero() {
           .rays-stage {
             transform: scale(.45);
             height: 248px !important;
+          }
+        }
+
+        @media (max-width: 430px) {
+          .rays-stage {
+            transform: scale(.34);
+            height: 187px !important;
           }
         }
 

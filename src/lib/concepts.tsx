@@ -207,9 +207,9 @@ console.log("Approx slot 1hr ago:", estimatedSlot);`,
     desc: "PoH is NOT a consensus mechanism — it's a cryptographic clock. It's a Verifiable Delay Function (VDF) based on SHA-256 hash chaining that proves time has passed between events. The leader runs PoH continuously, embedding transactions into the hash sequence. This creates a verifiable, tamper-proof timeline BEFORE blocks even reach consensus.",
     details: [
       "SHA-256 hash chain: output N feeds into input N+1",
-      "Each hash proves ~400ms of real time passed",
-      "Validators can verify the entire chain in parallel",
-      "Enables parallel tx processing by ordering txs first",
+      "Slots are the ~400ms window; PoH provides ordered hashes/entries inside the slot machinery",
+      "The leader produces the sequence sequentially; validators can verify recorded hashes in parallel",
+      "Gives Tower a ledger-encoded clock for timeouts and vote lockouts",
       "PoH runs inside the leader's CPU — not on-chain storage",
       "NOT a consensus mechanism — Tower BFT handles consensus",
       "Allows Solana to skip round-trip messaging for time agreement",
@@ -602,7 +602,7 @@ clusterNodes.slice(0, 5).forEach(node => {
     whyItMatters: "Tower BFT is why Solana can finalize blocks in ~13 seconds (32 slots). The lockout mechanism means that once 2/3 of stake has voted on a fork, any validator who tries to vote on a competing fork would have to wait out their lockout period — making reversals practically impossible and mathematically extremely expensive.",
     commonMistakes: [
       "Treating 'confirmed' as final — it's safe for UX but technically reversible",
-      "Not distinguishing between the 2 commitment levels in your app logic",
+      "Not distinguishing processed, confirmed, and finalized commitment in your app logic",
       "Ignoring vote account health when choosing validators to delegate to"
     ],
     code: `import { Connection, clusterApiUrl, VoteAccountStatus } from "@solana/web3.js";
@@ -1265,13 +1265,14 @@ pub struct VaultWithdraw<'info> {
     desc: "Sealevel is Solana's parallel smart contract execution runtime. Unlike Ethereum's EVM which runs one transaction at a time, Sealevel identifies transactions that don't share accounts and executes them simultaneously across multiple CPU threads. The key insight: every instruction declares which accounts it needs upfront, enabling static analysis before execution.",
     details: [
       "Parallel execution of non-overlapping account sets",
+      "SVM is the execution environment; Sealevel is the parallel scheduling model around it",
       "Read-only accounts: multiple txs can share access",
       "Writable accounts: exclusive lock per tx",
+      "Every instruction's declared read/write set is the scheduler's source of truth",
       "Default compute limit: 200,000 CUs per instruction",
       "Max per tx: 1,400,000 CUs (with setComputeUnitLimit)",
       "SBF (Solana BPF) bytecode — compiled from Rust, C, C++",
-      "BPF JIT compiled for near-native performance",
-      "Stack frames max 4KB, heap max 32KB"
+      "Hot writable accounts erase parallelism even when the validator has spare cores"
     ],
     whyItMatters: "Sealevel is why Solana can do 50,000+ TPS theoretically. If Alice is swapping tokens and Bob is minting an NFT, they use completely different accounts — Sealevel runs both simultaneously. But if Alice and Bob both trade the same SOL/USDC pool, those txs serialize. This is why popular pools have bottlenecks during high volume.",
     commonMistakes: [
@@ -1980,9 +1981,9 @@ async function airdropDevnet(
 const localConnection = new Connection("http://127.0.0.1:8899", "confirmed");
 
 // Clone mainnet programs to local validator:
-// solana-test-validator \
-//   --clone-upgradeable-program JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4 \ (Jupiter)
-//   --clone-upgradeable-program whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc \ (Whirlpools)
+// solana-test-validator \\
+//   --clone-upgradeable-program JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4 \\ (Jupiter)
+//   --clone-upgradeable-program whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc \\ (Whirlpools)
 //   --url mainnet-beta
 
 // ── PROGRAM IDs DIFFER BY CLUSTER ────────────────────────────────
@@ -2240,22 +2241,22 @@ async function findBestValidators() {
     icon: "Zap",
     tag: "Frontier",
     title: "Alpenglow Consensus",
-    desc: "Alpenglow is the largest change to Solana's core protocol ever shipped — it retires Tower BFT and on-chain PoH voting and replaces them with two components: Votor (a BLS-signature voting protocol) and Rotor (a single-hop, stake-weighted data dissemination layer that supersedes Turbine). The result is finality measured in ~100-150ms instead of ~12.8 seconds. Approved by 98.27% of voting stake in September 2025.",
+    desc: "Alpenglow is Solana's proposed consensus/finality redesign. Its first protocol change is Votor: validators vote off-chain and aggregate BLS signatures into certificates, replacing today's Tower BFT-style on-chain vote transaction path. The broader Alpenglow research also describes Rotor for data dissemination, but the active SIMD scopes Rotor separately from the first Votor rollout.",
     details: [
-      "Votor: validators sign vote certificates with BLS and aggregate them OFF-chain",
-      "No more vote transactions — kills the #1 source of ledger bloat and ~3M daily vote txs",
-      "One round of voting if ≥80% stake responds → finality in ~100ms",
-      "Two rounds if 60-80% stake responds → worst-case ~150-250ms finality",
-      "Rotor replaces Turbine's multi-hop tree with a flatter single-relay-layer broadcast",
+      "Votor: validators sign votes and aggregate them into off-chain BLS certificates",
+      "Vote transactions leave the normal transaction hot path, reducing ledger and bandwidth overhead",
+      "One voting round can finalize when enough stake responds quickly",
+      "A second round handles lower online participation while preserving safety",
+      "Rotor is a separate data-dissemination proposal in the broader Alpenglow design",
       "'20+20' resilience: tolerates 20% Byzantine + 20% offline stake simultaneously",
-      "Removes PoH from the critical voting path (PoH stays as a clock/ordering tool)",
-      "Targeted for mainnet rollout through 2026 after testnet hardening",
+      "Targets latency and vote overhead first; throughput depends on clients, scheduling, and block limits",
+      "Activation details remain protocol-version dependent while the SIMD path evolves",
     ],
-    whyItMatters: "Sub-150ms finality changes what you can build. Today apps wait ~1-2s for 'confirmed' and ~13s for 'finalized'; with Alpenglow, finalized settlement is faster than most web requests — payments, order books, and games can treat the chain as a low-latency backend. Removing vote transactions also frees a huge fraction of block space and bandwidth for real user activity, and shrinks ledger growth dramatically. If you architect around commitment levels, Alpenglow will collapse the gap between 'confirmed' and 'finalized' to near-zero.",
+    whyItMatters: "The point is not just a faster headline number. Today's finality path is tied to repeated validator votes that are themselves transactions. Moving vote aggregation out of the normal transaction stream can reduce ledger bloat, free blockspace, and make stronger settlement practical for apps that currently rely on optimistic confirmed states. It also forces builders to stop hard-coding today's commitment timing as if it were permanent.",
     commonMistakes: [
-      "Thinking Alpenglow deletes Proof of History — PoH remains as an ordering clock, just not in the voting hot path",
-      "Assuming it's live on mainnet today — it passed governance but ships progressively via testnet first",
-      "Confusing finality latency (~150ms) with block time (~400ms, also dropping over time)",
+      "Treating Rotor as part of the first Votor SIMD rollout — the proposal scopes it separately",
+      "Assuming all Alpenglow details are live on mainnet today — follow the active SIMD/feature activation state",
+      "Confusing finality latency with block time and execution throughput",
       "Believing faster finality means higher TPS — Alpenglow targets latency; throughput comes from Firedancer + block-limit raises",
     ],
     code: `// Alpenglow is a validator-level protocol change — there is no app SDK call.
@@ -2270,38 +2271,39 @@ const conn = new Connection("https://api.mainnet-beta.solana.com");
 const sig = "...";
 await conn.confirmTransaction(sig, "finalized"); // slow today
 
-// Post-Alpenglow, "finalized" returns in ~100-150ms because Votor
-// finalizes in one or two BLS-aggregated rounds instead of 32 slots.
+// Post-Alpenglow, finalized commitment is expected to be much faster because
+// Votor finalizes with aggregated vote certificates instead of on-chain vote
+// transactions accumulating through many slots.
 // Forward-looking apps should already prefer "confirmed" for UX and
-// reserve "finalized" for settlement — that code path gets ~80x faster
-// for free once the upgrade activates, with no client changes needed.
+// reserve "finalized" for settlement. Keep the code paths separate so
+// protocol upgrades can improve safety latency without a client rewrite.
 
-// What disappears: validators no longer pay for vote transactions.
-// Vote cost (~1 SOL/day/validator) and ledger bloat both collapse.`,
+// What changes: vote aggregation moves out of normal transaction execution,
+// reducing vote transaction overhead and ledger growth pressure.`,
     links: [
-      { label: "Alpenglow Whitepaper (Anza)", url: "https://www.anza.xyz/blog/alpenglow-a-new-consensus-for-solana" },
-      { label: "QuickNode — Alpenglow explained", url: "https://blog.quicknode.com/solana-alpenglow-upgrade/" },
+      { label: "SIMD-0326 — Alpenglow consensus", url: "https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0326-alpenglow.md" },
+      { label: "Anza — Alpenglow overview", url: "https://www.anza.xyz/blog/alpenglow-a-new-consensus-for-solana" },
     ],
   },
   {
     icon: "Flame",
     tag: "Frontier",
     title: "Firedancer & Validator Clients",
-    desc: "Firedancer is a ground-up validator client written in C by Jump Crypto — independent from the original Rust codebase (Agave, maintained by Anza). Client diversity means no single bug can halt the chain. Firedancer rebuilds the networking, runtime, and consensus stack for raw speed, demonstrating 600k+ TPS in lab conditions and targeting the path to 1M TPS.",
+    desc: "Firedancer is Jump Crypto's independent Solana validator client project, written in C. Frankendancer is the production bridge: Firedancer's high-performance networking path paired with the Agave runtime and consensus. Full Firedancer is still being hardened separately, which is exactly why this page treats client diversity, performance, and rollout status as different topics.",
     details: [
       "Agave (Rust): the reference client, formerly 'solana-labs', now maintained by Anza",
-      "Frankendancer: hybrid — Firedancer's networking + Agave's runtime/consensus (live since Sep 2024)",
-      "Full Firedancer: pure C client — started voting mainnet Jul 2025, producing full blocks Oct 2025",
+      "Frankendancer: Firedancer's networking stack with Agave runtime/consensus integration",
+      "Full Firedancer: pure C validator path, still separate from broad production rollout",
       "Client diversity removes a single-point-of-failure: a bug in one client can't stop the network",
       "Kernel-bypass networking (AF_XDP), tile-based architecture, hand-tuned for line-rate",
-      "As of late 2025 Frankendancer ran ~20% of staked SOL",
       "Other clients exist/are emerging (e.g. Sig by Syndica, a Zig read-path client)",
+      "Operators should distinguish available Frankendancer releases from full Firedancer readiness",
       "Same protocol, different implementations — they must agree bit-for-bit on state",
     ],
-    whyItMatters: "Solana famously halted in its early years partly because it had one client implementation. A second, independently-written client means a consensus-breaking bug in Agave doesn't take down the chain if Firedancer disagrees — and vice versa. For builders, Firedancer raises the performance ceiling: higher block limits and lower latency are only safe when validators can actually keep up with them. The drive toward 1M TPS and tighter slot times is gated on client performance, and Firedancer is the engine for it.",
+    whyItMatters: "A second independently-engineered client changes Solana's risk profile. If one implementation has a consensus or networking bug, the network has a path away from monoculture. For builders, the performance angle matters too: higher block limits and lower latency are only safe when validators can ingest, replay, and vote without falling behind. Firedancer is part of the headroom needed for the throughput roadmap.",
     commonMistakes: [
       "Thinking Firedancer is a new blockchain or token — it's a validator client for the same Solana network",
-      "Assuming full Firedancer is widely deployed — Jump advises waiting for audits before large-stake migration",
+      "Equating Frankendancer availability with full Firedancer being broadly production-ready",
       "Confusing Frankendancer (hybrid) with full Firedancer (pure C, all stages rewritten)",
       "Believing more clients fragments the network — they all run identical consensus rules",
     ],
@@ -2327,7 +2329,7 @@ console.table(byVersion);
 // The network only stays healthy if no single client holds >33% of stake.`,
     links: [
       { label: "Firedancer (GitHub)", url: "https://github.com/firedancer-io/firedancer" },
-      { label: "Blockdaemon — Firedancer deep dive", url: "https://www.blockdaemon.com/blog/solanas-firedancer-validator-client-deep-dive" },
+      { label: "Frankendancer release notes", url: "https://github.com/firedancer-io/firedancer/releases" },
     ],
   },
   {
@@ -2340,12 +2342,12 @@ console.table(byVersion);
       "FPGAs do signature verification + deduplication at line rate (100+ Gbps)",
       "Multicast: one-to-many broadcast replaces sequential per-validator forwarding",
       "150+ high-performance fiber links across dozens of global sites",
-      "Mainnet-beta went live late 2025 with ~22% of staked SOL connected",
+      "Validators can opt into dedicated validator-to-validator connectivity",
       "Powered by the 2Z SPL token, which rewards bandwidth/link contributors",
       "Latency cuts directly shrink the time budget for block propagation and voting",
-      "Complements Alpenglow's Rotor — faster pipes make faster finality realistic",
+      "Complements faster-finality research by lowering validator-to-validator latency",
     ],
-    whyItMatters: "Solana's performance is ultimately bounded by physics: how fast can a block reach 2/3 of stake across the planet. The public internet routes packets through congested, adversarial paths. DoubleZero gives consensus its own road — lower latency, less jitter, and hardware-level filtering of spam before it ever touches a validator's CPU. Combined with Alpenglow and Firedancer, it's the third leg of the 2025 push to make finality faster and block production more reliable under load.",
+    whyItMatters: "Solana's performance is ultimately bounded by physics: how fast can a block reach 2/3 of stake across the planet. The public internet routes packets through congested, adversarial paths. DoubleZero gives consensus its own road — lower latency, less jitter, and hardware-level filtering of spam before it ever touches a validator's CPU. Alongside faster consensus and stronger clients, dedicated networking makes lower-latency block production more realistic under load.",
     commonMistakes: [
       "Thinking DoubleZero is a Solana-only product — it's a general 'internet layer' for distributed systems",
       "Assuming it replaces the public internet for users — it's for validator-to-validator consensus traffic",
@@ -2377,9 +2379,9 @@ console.table(byVersion);
     icon: "Activity",
     tag: "Frontier",
     title: "Async Execution & Rising Block Limits",
-    desc: "Solana's throughput roadmap is a steady raising of per-block compute limits plus a re-architecture that decouples block production from execution. SIMD-0256 lifted the block limit from 50M to 60M compute units in 2025; SIMD-0286 proposes 100M. Asynchronous Program Execution (APE) separates 'agreeing on transaction order' from 'computing the resulting state', so leaders can pack blocks faster than nodes execute them.",
+    desc: "Solana's throughput roadmap is a steady raising of per-block compute limits plus a re-architecture that decouples block production from execution. SIMD-0256 moves the block limit from 50M to 60M compute units; SIMD-0286 proposes 100M. Asynchronous Program Execution (APE) separates 'agreeing on transaction order' from 'computing the resulting state', so leaders can pack blocks faster than nodes execute them.",
     details: [
-      "Per-block limit history: 48M → 50M → 60M (SIMD-0256, Jul 2025) → 100M proposed (SIMD-0286)",
+      "Per-block limit path: 48M → 50M → 60M via SIMD-0256, with 100M proposed in SIMD-0286",
       "Limits gate parallelizable, non-vote work: DeFi swaps, mints, DePIN bursts",
       "Per-account write limit (~12M CU) prevents one hot account from eating the block",
       "Async execution: consensus orders txs first; state computation follows, off the critical path",
@@ -2427,12 +2429,13 @@ const tx = new Transaction().add(
     desc: "Solana validators ingest transactions over QUIC (the UDP-based protocol behind HTTP/3), not plain UDP or TCP. QUIC adds connection identity, flow control, and back-pressure so a leader can throttle abusive senders. Stake-Weighted Quality of Service (SWQoS) layers on top: connections from high-stake validators get a guaranteed share of the leader's ingest capacity, so spam from anonymous senders can't crowd out real traffic.",
     details: [
       "QUIC replaced raw UDP ingest in 2022 to stop the 'fire a million packets' spam vector",
+      "Fetch Stage reads serialized transaction bytes from QUIC streams into packet batches",
       "Connections are rate-limited per source IP and per identity",
       "SWQoS reserves up to ~80% of leader ingest for stake-weighted peers, ~20% for unstaked",
+      "TPU paths separate standard txs, validator votes, and forwarded txs",
       "An RPC with stake (or partnered with a staked validator) lands transactions more reliably",
-      "This is why premium RPC/sender services advertise 'staked connections'",
       "Back-pressure: the leader can signal senders to slow down instead of silently dropping",
-      "Helps during congestion — your tx competes for a reserved lane, not the open flood",
+      "No global mempool does not mean no queues — TPU stages still buffer batches in memory",
       "Transactions still must also win on priority fee to be included once ingested",
     ],
     whyItMatters: "During congestion, the bottleneck isn't just block space — it's whether your transaction even reaches the leader. With plain UDP, anyone could drown the ingest port. QUIC + SWQoS turns ingest into a metered, identity-aware pipe where stake buys reliability. This is the hidden reason a transaction sent through a high-quality staked sender lands when the same tx via a public RPC silently disappears. If you run a latency-sensitive app, understanding SWQoS explains why you pay for a premium sender.",
@@ -2893,12 +2896,13 @@ stream.write({
     details: [
       "Ledger (blockstore): immutable record of shreds/entries/blocks; grows forever",
       "AccountsDB: current state only — what every account holds right now",
-      "AccountsDB is heavily memory-mapped (the lineage of 'Cloudbreak') for O(1) lookups",
+      "AccountsDB layers persistent account files, a sharded in-memory index, and caches",
+      "AppendVec-style account files favor sequential appends over random in-place updates",
+      "AccountsIndex answers: where is the latest version of this pubkey?",
       "Snapshots: full + incremental compressed state dumps, taken every N slots",
       "A new validator downloads a recent snapshot to join in minutes, not by replaying genesis",
       "Most validators prune old ledger — full history lives on archival/warehouse nodes + BigTable",
-      "Account Index lets getProgramAccounts filter by owner/data without scanning everything",
-      "Accounts Lattice Hash / state hashing lets nodes agree on the state root",
+      "Shrink/cleanup compacts old account versions without blocking hot transaction reads",
     ],
     whyItMatters: "This architecture is why 'what's the balance now?' is a fast in-memory read while 'what was this account 6 months ago?' may not be answerable from a normal RPC — most nodes don't keep that history. It explains snapshot-based fast bootstrapping, why getProgramAccounts can be heavy (it scans AccountsDB), and why you need an archival/indexer provider for deep history. When you reason about RPC behavior, rate limits, and which queries are cheap vs expensive, you're really reasoning about which store they hit.",
     commonMistakes: [
@@ -2933,16 +2937,18 @@ console.log("matched accounts:", owned.length);
     icon: "Activity",
     tag: "System Design",
     title: "Banking Stage & The Scheduler",
-    desc: "Inside the leader's TPU, the Banking Stage is where ordered, verified transactions actually execute and update state. Its scheduler decides which transactions run in parallel without conflicting on account writes — the practical realization of Sealevel. The 2024 'central scheduler' replaced the older multi-threaded greedy approach with a single scheduler that builds a conflict graph for far better throughput and fairness.",
+    desc: "Inside the leader's TPU, the Banking Stage is where verified transactions actually execute and update state. Its scheduler decides which transactions run in parallel without conflicting on account writes — the practical realization of Sealevel. Modern scheduler paths can use conflict/dependency graphs and priority signals instead of blindly feeding thread-local queues.",
     details: [
       "Banking Stage = the execution+packing phase of the leader's TPU pipeline",
       "Takes verified txs, groups non-conflicting ones, executes them across worker threads",
+      "Inputs are split across non-vote, TPU vote, and gossip vote paths",
       "Conflict = two txs that write the same account; they must serialize",
-      "Central scheduler (greedy, conflict-graph based) replaced the old thread-per-lane model",
+      "Schedulers include conflict-graph/priority paths and simpler greedy paths",
+      "The Bank lifecycle is open -> frozen -> rooted",
+      "Frozen Bank hash is what validators vote on; rooted state is squashed into AccountsDB",
       "Better scheduling = more of the block's compute budget actually used productively",
       "Priority + compute estimates feed the scheduler's ordering decisions",
-      "This is where your priority fee and tight CU limit pay off in landing odds",
-      "Drops/reorders here are why a 'sent' tx may never land even with space available",
+      "Vote isolation protects liveness when non-vote traffic is congested or adversarial",
     ],
     whyItMatters: "Sealevel is the idea (parallel execution by declared account access); the Banking Stage scheduler is the implementation that makes or breaks it. The shift to a central scheduler meaningfully raised effective throughput and made inclusion fairer under load. For builders this is the missing link between 'I set a priority fee' and 'my tx landed': the scheduler ranks and packs transactions here, favoring well-specified, non-conflicting, properly-priced txs. It also explains write-lock contention — many txs fighting over one hot account serialize through this stage and bottleneck.",
     commonMistakes: [

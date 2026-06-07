@@ -11,6 +11,8 @@ import { Analytics } from "@vercel/analytics/react";
 import Landing from "./pages/Landing";
 const DocsIndex = lazy(() => import("./pages/DocsIndex"));
 const ConceptPage = lazy(() => import("./pages/ConceptPage"));
+const DeepDives = lazy(() => import("./pages/DeepDives"));
+const ChapterPage = lazy(() => import("./pages/ChapterPage"));
 const Innovations = lazy(() => import("./pages/Innovations"));
 const Lifecycle = lazy(() => import("./pages/Lifecycle"));
 const SandwichSim = lazy(() => import("./pages/SandwichSim"));
@@ -43,6 +45,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/innovations" element={<Innovations />} />
+            <Route path="/deep-dives" element={<DeepDives />} />
+            <Route path="/deep-dives/:id" element={<ChapterPage />} />
             <Route path="/lifecycle" element={<Lifecycle />} />
             <Route path="/sandwich" element={<SandwichSim />} />
             <Route path="/docs" element={<DocsIndex />} />

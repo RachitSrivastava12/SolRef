@@ -756,6 +756,143 @@ function breakeven(commissionRate, epochInflationPerStake) {
     },
   ],
 
+  // ── 21. FRONTIER / INFRA DEEP TASKS ────────────────────────────────────
+  alpenglow: [
+    {
+      id: "ag-votor-rotor", kind: "reasoning", difficulty: "hard",
+      title: "Separate Votor from Rotor",
+      goal: "Explain Alpenglow as two scopes: Votor for consensus/finality and Rotor as a separate data-dissemination direction. State why mixing them leads to a bad mental model.",
+      starter: `// Alpenglow is often explained as Votor + Rotor, but the first SIMD
+// scopes the Votor consensus change separately from Rotor.
+// TODO: explain Votor, Rotor, and why they should not be treated as one rollout.
+`,
+      hints: [
+        "Votor is about validator votes becoming aggregated certificates.",
+        "Rotor is about data dissemination / block propagation, not voting rules.",
+        "The product impact of Votor is finality latency and vote overhead; Rotor is a networking/propagation path.",
+      ],
+      criteria: "Correctly distinguishes Votor from Rotor, ties Votor to off-chain vote aggregation/finality, ties Rotor to data dissemination, and warns against treating both as one activated feature.",
+    },
+    {
+      id: "ag-client-commitment", kind: "reasoning", difficulty: "medium",
+      title: "Future-proof commitment logic",
+      goal: "Write comments explaining how a client should separate UX optimism from settlement safety so faster finality upgrades improve the app without a rewrite.",
+      starter: `// A client should not hard-code today's finalized latency forever.
+// TODO: outline commitment choices for optimistic UI vs settlement safety.
+`,
+      hints: [
+        "processed is a weak signal; confirmed is useful for UX; finalized is settlement safety.",
+        "Keep retry/expiry logic separate from finality display logic.",
+        "If finalized gets faster, the app benefits when the code already has a finalized path.",
+      ],
+      criteria: "Explains processed/confirmed/finalized roles, keeps optimistic UI separate from settlement, and avoids hard-coding a fixed slot/time assumption for finality.",
+    },
+  ],
+
+  "quic-swqos": [
+    {
+      id: "qs-ingress", kind: "reasoning", difficulty: "medium",
+      title: "Why fees are not enough",
+      goal: "Explain why a high priority fee cannot help a transaction that never reaches the leader, and how QUIC + SWQoS changes the ingress problem.",
+      starter: `// Priority fees matter after a transaction reaches the leader.
+// TODO: explain the earlier bottleneck: sender ingress under congestion.
+`,
+      hints: [
+        "QUIC adds identity, flow control, and back-pressure at the network connection layer.",
+        "SWQoS reserves leader ingest capacity for staked/trusted connections.",
+        "A priority fee only competes inside scheduling once the leader has the packet.",
+      ],
+      criteria: "Explains packet ingress as a separate bottleneck from scheduling/block space, describes QUIC and SWQoS, and states why sender infrastructure affects landing rate.",
+    },
+  ],
+
+  "svm-bytecode": [
+    {
+      id: "svm-boundary", kind: "reasoning", difficulty: "hard",
+      title: "Draw the SVM boundary",
+      goal: "In comments, define what belongs inside the SVM execution boundary and what belongs to validator stages around it.",
+      starter: `// The SVM executes transactions, but it is not the whole validator.
+// TODO: split these into SVM vs surrounding pipeline:
+// QUIC ingest, scheduler, account ownership checks, CPI invoke context,
+// compute metering, shreds, gossip, account write result.
+`,
+      hints: [
+        "SVM/runtime: ownership checks, CPI/invoke context, compute metering, instruction execution, account write results.",
+        "Surrounding validator pipeline: QUIC ingest, scheduler/banking, shreds/Turbine, gossip.",
+        "The boundary matters because test engines can execute at the runtime layer without simulating the whole network.",
+      ],
+      criteria: "Correctly classifies runtime responsibilities vs networking/scheduling/propagation responsibilities and explains why the boundary matters for tools like LiteSVM.",
+    },
+  ],
+
+  accountsdb: [
+    {
+      id: "adb-classify", kind: "reasoning", difficulty: "medium",
+      title: "State, ledger, or snapshot?",
+      goal: "Classify common validator data questions as AccountsDB, ledger/blockstore, snapshot, or indexer/archive, and explain the reason for each.",
+      starter: `// Classify each question: AccountsDB, ledger/blockstore, snapshot, or archive/indexer.
+const questions = [
+  "What is this account balance right now?",
+  "What did this account look like six months ago?",
+  "How does a new validator avoid replaying from genesis?",
+  "Where are shreds/entries stored after propagation?",
+];
+// TODO: fill classifications + explanations.
+`,
+      hints: [
+        "Current account state is AccountsDB.",
+        "Deep history usually needs archival ledger/indexer infrastructure.",
+        "Snapshots are compressed recent AccountsDB state for bootstrapping.",
+        "Blockstore/ledger stores shreds, entries, and blocks.",
+      ],
+      criteria: "Maps current balance to AccountsDB, old state to archive/indexer, validator bootstrap to snapshots, and shreds/entries to ledger/blockstore with concise explanations.",
+    },
+  ],
+
+  "banking-stage": [
+    {
+      id: "bank-conflict-graph", kind: "reasoning", difficulty: "hard",
+      title: "Build a conflict batch",
+      goal: "Given transactions with read/write sets and priority scores, group a first parallel batch that maximizes useful work without write conflicts.",
+      starter: `// Banking Stage can run non-conflicting transactions in parallel.
+const txs = [
+  { id: "swapA", writes: ["pool"], reads: ["oracle"], score: 90 },
+  { id: "mintB", writes: ["userB"], reads: ["config"], score: 35 },
+  { id: "swapC", writes: ["pool"], reads: ["oracle"], score: 70 },
+  { id: "claimD", writes: ["userD"], reads: ["config"], score: 20 },
+];
+// TODO: choose the first parallel batch. Explain why swapA and swapC cannot both run.
+`,
+      hints: [
+        "Sort by score, then greedily add txs that do not share writable accounts with the batch.",
+        "swapA and swapC both write pool, so they conflict.",
+        "mintB and claimD write separate user accounts, so they can run alongside one pool writer.",
+      ],
+      criteria: "Selects a non-conflicting batch such as swapA + mintB + claimD, excludes swapC due to pool write conflict, and explains the scheduler/account-lock reasoning.",
+    },
+  ],
+
+  firedancer: [
+    {
+      id: "fd-matrix", kind: "reasoning", difficulty: "medium",
+      title: "Client rollout matrix",
+      goal: "Create a small matrix comparing Agave, Frankendancer, and full Firedancer by language/stack, production role, and risk reduced.",
+      starter: `// TODO: fill a matrix for validator clients.
+const clients = [
+  { name: "Agave", stack: "", role: "", riskReduced: "" },
+  { name: "Frankendancer", stack: "", role: "", riskReduced: "" },
+  { name: "Full Firedancer", stack: "", role: "", riskReduced: "" },
+];
+`,
+      hints: [
+        "Agave is the Rust reference client maintained by Anza.",
+        "Frankendancer is the bridge: Firedancer networking with Agave runtime/consensus.",
+        "Full Firedancer is the independent pure-C validator path being hardened for broader rollout.",
+      ],
+      criteria: "Clearly distinguishes Agave, Frankendancer, and full Firedancer, and explains client diversity as reducing implementation monoculture risk rather than changing the chain.",
+    },
+  ],
+
 };
 
 export function tasksFor(conceptId: string): Task[] {
