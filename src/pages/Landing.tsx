@@ -17,9 +17,12 @@ const PILLARS = [
 ];
 
 const INTERACTIVE = [
-  { to: "/lifecycle", label: "Transaction lifecycle", desc: "Signature to finality." },
-  { to: "/sandwich", label: "Sandwich simulator", desc: "Slippage, bundles, protection." },
-  { to: "/innovations", label: "Commitment states", desc: "Processed, confirmed, finalized." },
+  { to: "/docs/proof-of-history", label: "Proof of History clock", desc: "Watch the hash chain become a verifiable timeline." },
+  { to: "/docs/sealevel", label: "Sealevel scheduler", desc: "See which transactions run in parallel — and which serialize." },
+  { to: "/docs/priority-fees", label: "Fee estimator", desc: "Slide compute limit and price; watch the fee." },
+  { to: "/docs/tower-bft", label: "Lockout finality", desc: "Cast votes and watch finality lock in." },
+  { to: "/lifecycle", label: "Transaction lifecycle", desc: "Signature to finality, step by step." },
+  { to: "/sandwich", label: "Sandwich simulator", desc: "Slippage, bundles, and protection." },
 ];
 
 const QUICK_LINKS = [

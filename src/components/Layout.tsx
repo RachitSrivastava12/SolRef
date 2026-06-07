@@ -205,6 +205,16 @@ export default function Layout({ children, wide }: { children: ReactNode; wide?:
               <p style={{ color: "var(--text-dim)", fontSize: 13, marginTop: 14, lineHeight: 1.65 }}>
                 A concise Solana reference for protocol internals, infrastructure, and program-side concepts.
               </p>
+              <a href="https://x.com/soldotref" target="_blank" rel="noopener noreferrer"
+                aria-label="SolRef on X"
+                style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 16, padding: "7px 12px", borderRadius: 9, border: "1px solid var(--line-2)", color: "var(--text-mid)", fontSize: 13, transition: "border-color .18s var(--ease-out), color .18s var(--ease-out)" }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--line-3)"; e.currentTarget.style.color = "var(--text)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--line-2)"; e.currentTarget.style.color = "var(--text-mid)"; }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                </svg>
+                Follow on X
+              </a>
             </div>
             <div style={{ display: "flex", gap: 56, flexWrap: "wrap" }}>
               <FootCol title="Learn" links={[["Deep dives", "/deep-dives"], ["Docs", "/docs"], ["Learning path", "/learn"], ["Quizzes", "/quizzes"], ["Workspace", "/workspace"]]} />

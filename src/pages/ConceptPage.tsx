@@ -11,6 +11,7 @@ import { tasksFor } from "../lib/tasks";
 import { chapterConcepts, chapterForConceptId } from "../lib/chapters";
 import { deepDiveFor } from "../lib/deepDives";
 import ConceptDiagram, { hasDiagram } from "../lib/Diagrams";
+import ConceptLab, { hasLab } from "../lib/Labs";
 import { useProgress } from "../lib/useProgress";
 
 function useActiveSection(ids: string[]) {
@@ -51,6 +52,7 @@ export default function ConceptPage() {
       ["overview", "Overview"],
       deepDive && ["deep", "Deep dive"],
       hasDiagram(m.id) && ["diagram", "Diagram"],
+      hasLab(m.id) && ["lab", "Try it"],
       concept.whyItMatters && ["why", "Why it matters"],
       ["facts", "Key facts"],
       concept.commonMistakes?.length && ["mistakes", "Common mistakes"],
@@ -177,6 +179,16 @@ export default function ConceptPage() {
 
           {/* diagram */}
           {hasDiagram(m.id) && <div id="diagram" style={{ marginBottom: 40, scrollMarginTop: "calc(var(--nav-h) + 8px)" }}><ConceptDiagram id={m.id} /></div>}
+
+          {/* interactive lab */}
+          {hasLab(m.id) && (
+            <section id="lab" style={{ marginBottom: 44, scrollMarginTop: "calc(var(--nav-h) + 8px)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                <span className="eyebrow">Try it</span>
+              </div>
+              <ConceptLab id={m.id} />
+            </section>
+          )}
 
           {/* why it matters */}
           {concept.whyItMatters && (
