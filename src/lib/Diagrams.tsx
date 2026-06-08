@@ -367,6 +367,37 @@ const diagrams: Record<string, () => ReactNode> = {
       {T(320, 162, "11 registers · bounded stack · restricted syscalls · isolated from other programs", DIM, 10.5, 500)}
     </Wrap>
   ),
+  "memory-allocator": () => (
+    <Wrap vb="0 0 640 230" caption="The heap is a bump allocator: alloc just advances a pointer and free is a no-op. 32 KiB by default (reset each instruction), up to 256 KiB via RequestHeapFrame. Stack frames are only 4 KiB.">
+      {title("A program's memory map (rBPF)")}
+      <Node x={28} y={50} w={140} h={48} t="Program code" sub="read-only · SBF" />
+      <Node x={180} y={50} w={140} h={48} t="Stack" sub="4 KiB / frame" color={YEL} />
+      <Node x={332} y={50} w={140} h={48} t="Heap" sub="32 KiB → 256 KiB" accent />
+      <Node x={484} y={50} w={128} h={48} t="Account input" sub="serialized in" />
+      {T(40, 132, "heap", DIM, 10, 600, "start")}
+      <rect x={40} y={140} width={560} height={30} rx={8} fill={PANEL} stroke={LINE} />
+      <rect x={40} y={140} width={210} height={30} rx={8} fill="rgba(20,241,149,.12)" stroke={A} />
+      {T(145, 159, "used", A, 10.5, 700)}
+      {arrow(250, 155, 286, 155, A)}
+      {T(300, 159, "bump pointer →", MID, 10, 600, "start")}
+      {T(596, 159, "dealloc = no-op", DIM, 10, 600, "end")}
+      {T(320, 200, "free()/Drop never reclaims heap within an instruction · a big stack local overflows the 4 KiB frame", DIM, 10, 500)}
+    </Wrap>
+  ),
+  signatures: () => (
+    <Wrap vb="0 0 640 220" caption="Tx signatures (Ed25519) authorize the transaction and set is_signer. Precompiles verify any signature as DATA — Secp256r1 (P-256) is what makes passkeys/WebAuthn possible.">
+      {title("Two layers: signing a tx vs verifying a signature")}
+      <Node x={36} y={56} w={170} h={50} t="Ed25519 tx signature" sub="64 bytes" accent />
+      {arrow(207, 81, 251, 81, A)}
+      <Node x={254} y={56} w={170} h={50} t="account.is_signer = true" sub="authorization" color={A} />
+      {T(120, 132, "the tx is authorized", DIM, 10, 500)}
+      <rect x={36} y={150} width={568} height={1} fill={LINE} />
+      {T(54, 170, "PRECOMPILES — verify a signature as data:", DIM, 10, 700, "start")}
+      <Node x={36} y={180} w={184} h={32} t="Ed25519 — arbitrary msgs" align="start" />
+      <Node x={228} y={180} w={184} h={32} t="Secp256k1 — Ethereum" align="start" />
+      <Node x={420} y={180} w={192} h={32} t="Secp256r1 — passkeys / WebAuthn" align="start" accent />
+    </Wrap>
+  ),
   "token-extensions": () => (
     <Wrap vb="0 0 640 220" caption="Token-2022 is a separate program whose mints/accounts carry opt-in extensions in TLV data — features that previously needed bespoke wrapper programs.">
       {title("Token Extensions (Token-2022) — native opt-in features")}

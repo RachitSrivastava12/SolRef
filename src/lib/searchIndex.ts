@@ -44,6 +44,8 @@ export const ALIASES: Record<string, string> = {
   "banking-stage": "banking stage scheduler tpu worker priograph greedy bank open frozen rooted execute commit hot path",
   jito: "jito bundle block engine tip auction mev searcher jitosol relay",
   "local-fee-markets": "local fee market hot account per account contention congestion pricing isolated",
+  "memory-allocator": "memory allocator bump allocator heap 32kb 256kb requestheapframe stack frame 4kb access violation out of memory alloc free drop dealloc zero copy pinocchio rust no_std",
+  signatures: "signature signatures ed25519 secp256k1 secp256r1 p-256 passkey webauthn precompile ed25519program secp256k1program is_signer sign verify multisig ethereum signature scheme curve25519 instructions sysvar introspection",
 };
 
 const STOP = new Set(["how", "do", "does", "did", "what", "whats", "which", "is", "is", "the", "a", "an", "of", "to", "in", "on", "for", "and", "or", "work", "works", "working", "why", "when", "are", "my", "i", "can", "with", "vs", "explain", "about", "tell", "me", "between", "difference", "mean", "means", "should", "use"]);

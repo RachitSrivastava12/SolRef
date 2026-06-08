@@ -3084,6 +3084,108 @@ console.log("suggested micro-lamports/CU for these accounts:", p75);
       { label: "Helius — local fee markets", url: "https://www.helius.dev/blog/solana-local-fee-markets" },
     ],
   },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  PROGRAM INTERNALS that trip people up
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    icon: "Box",
+    tag: "Programs",
+    title: "Memory & the Allocator",
+    desc: "Solana programs run with a tiny, unusual memory model that surprises everyone coming from normal Rust. The default global allocator is a BUMP allocator: it hands out memory by advancing a pointer and never frees — deallocation is a no-op. The heap is just 32 KiB per instruction (requestable up to 256 KiB), and each stack call frame is 4 KiB. This is the #1 source of mysterious 'memory allocation failed' and stack 'access violation' errors.",
+    details: [
+      "Default heap: 32 KiB, and it RESETS at the start of each instruction (no carry-over)",
+      "Default global allocator is a bump allocator — free/Drop does NOT reclaim heap",
+      "Need more? ComputeBudget RequestHeapFrame, in 1 KiB steps, up to 256 KiB (costs extra CUs)",
+      "Stack: 4 KiB per call frame — a large stack array/struct overflows it instantly",
+      "Max call depth 64; cross-program invocation (CPI) depth is capped at 4",
+      "Memory regions: program code (read-only), stack, heap, and the serialized account input region",
+      "Any out-of-bounds pointer → 'access violation' and the instruction fails",
+      "Zero-copy / borrowing avoids the heap entirely — preferred in hot, lean programs",
+    ],
+    whyItMatters: "Because free() is a no-op and the heap is only 32 KiB, ordinary Rust patterns that churn allocations — growing a Vec, Box in a loop, lots of format!/String work — silently eat the heap until it's exhausted mid-instruction, even though you 'dropped' everything. And one big stack-allocated array blows the 4 KiB frame. Knowing the bump allocator, the heap reset, and the region sizes is what separates programs that quietly fail under load from ones that don't — and it's exactly why zero-copy account parsing and lean frameworks like Pinocchio exist.",
+    commonMistakes: [
+      "Expecting Drop/free to reclaim heap — it doesn't; allocations only accumulate within an instruction",
+      "Putting a large array or struct on the stack and blowing the 4 KiB frame ('access violation')",
+      "Not calling RequestHeapFrame before logic that needs more than 32 KiB",
+      "Assuming heap allocations persist across instructions — the heap is reset each instruction",
+    ],
+    code: `import { ComputeBudgetProgram, Transaction } from "@solana/web3.js";
+
+// The on-chain default allocator is a BUMP allocator:
+//   - alloc advances a pointer inside a fixed 32 KiB heap
+//   - dealloc / Drop is a NO-OP — memory is never reclaimed mid-instruction
+// So this loop can exhaust the heap even though each String is "dropped":
+//   for i in 0..5000 { let s = format!("{i}"); /* dropped, but heap NOT freed */ }
+
+// Need more than 32 KiB? Request a bigger heap frame (multiple of 1024, max 256 KiB).
+const tx = new Transaction().add(
+  ComputeBudgetProgram.requestHeapFrame({ bytes: 256 * 1024 }), // 262144
+  // ...your instruction that needs the larger heap
+);
+
+// Rules of thumb on-chain:
+//   - Prefer borrowing / zero-copy account parsing over heap allocation.
+//   - Keep large data in ACCOUNTS, not on the 4 KiB stack frame.
+//   - The heap is per-instruction; it does not carry state across instructions.`,
+    links: [
+      { label: "Solana Docs — programs FAQ (memory)", url: "https://solana.com/docs/programs/faq" },
+      { label: "Helius — optimizing Solana programs", url: "https://www.helius.dev/blog/optimizing-solana-programs" },
+    ],
+  },
+  {
+    icon: "Lock",
+    tag: "Core Infra",
+    title: "Signature Schemes",
+    desc: "Transactions are authorized with Ed25519 signatures (EdDSA over Curve25519, 64 bytes) — a valid one is what sets an account's is_signer flag. But Solana can also VERIFY other schemes inside a transaction through native precompile programs: Ed25519, Secp256k1 (Ethereum-style), and Secp256r1 (P-256 — the basis for passkeys/WebAuthn). The big confusion: 'signing a transaction' and 'verifying a signature inside a program' are two completely different things.",
+    details: [
+      "Tx signatures are Ed25519 (Curve25519 EdDSA), 64 bytes; the fee payer + every signer account signs",
+      "A valid signature → account.is_signer = true inside the program (that's authorization)",
+      "Precompiles verify signatures as DATA — far cheaper than verifying in BPF bytecode:",
+      "  • Ed25519 Program — verify arbitrary Ed25519 signatures",
+      "  • Secp256k1 Program — verify Ethereum-style secp256k1 (bridges, ETH-signed messages)",
+      "  • Secp256r1 Program — verify P-256 → passkeys / WebAuthn / hardware keys",
+      "A precompile instruction points (by byte offset) at the signature, pubkey, and message",
+      "Your program confirms it ran by reading the Instructions sysvar (instruction introspection)",
+    ],
+    whyItMatters: "Signature verification is the foundation of every custom auth scheme on Solana — multisig, session keys, Ethereum interop, and especially passkeys. You cannot cheaply verify a non-Ed25519 signature in BPF; instead you attach the matching precompile instruction and have your program check — via the Instructions sysvar — that it was present and verified the exact message you expect. The Secp256r1 precompile is what makes passkey login and consumer-grade account abstraction possible; Secp256k1 is what lets a program trust an Ethereum signature. Confusing is_signer (the tx was signed) with precompile verification (an arbitrary signature was checked) leads to broken or insecure auth.",
+    commonMistakes: [
+      "Trying to verify a secp256k1/secp256r1 signature directly in BPF — use the precompile instead",
+      "Not validating via the Instructions sysvar that the precompile instruction actually ran (spoofable otherwise)",
+      "Confusing is_signer (this account signed the tx) with verifying a signature over custom data",
+      "The precompile and your program disagreeing on the exact message / pubkey / offsets",
+    ],
+    code: `import { Transaction, Ed25519Program, Keypair } from "@solana/web3.js";
+import nacl from "tweetnacl";
+
+// 1) TX-LEVEL: every required signer signs the message with Ed25519.
+//    A valid signature is what makes account.is_signer === true on-chain.
+
+// 2) IN-PROGRAM VERIFICATION via a precompile. Example: verify an Ed25519
+//    signature over an arbitrary message (e.g. an off-chain attestation).
+const signer = Keypair.generate();
+const message = new TextEncoder().encode("approve:42");
+const signature = nacl.sign.detached(message, signer.secretKey);
+
+const tx = new Transaction().add(
+  Ed25519Program.createInstructionWithPublicKey({
+    publicKey: signer.publicKey.toBytes(),
+    message,
+    signature,
+  }),
+  // ...then YOUR instruction. Inside the program, read the Instructions sysvar
+  // and confirm the Ed25519 precompile ran with the expected pubkey + message
+  // BEFORE trusting it. Otherwise an attacker can omit/forge the check.
+);
+
+// Ethereum signatures → Secp256k1Program. Passkeys / WebAuthn → the Secp256r1
+// precompile (P-256). Same pattern every time: attach the precompile ix, then
+// verify it via instruction introspection.`,
+    links: [
+      { label: "Solana Docs — transactions & signatures", url: "https://solana.com/docs/core/transactions" },
+      { label: "SIMD-0075 — secp256r1 precompile (passkeys)", url: "https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0075-precompile-for-secp256r1-sigverify.md" },
+    ],
+  },
 ];
 
 export const tagColors: Record<string, string> = {
@@ -3158,6 +3260,8 @@ export const META: Record<string, Meta> = {
   "Banking Stage & The Scheduler": { id: "banking-stage", level: "advanced" },
   "Jito: Bundles & Block Engine": { id: "jito", level: "advanced" },
   "Local Fee Markets": { id: "local-fee-markets", level: "intermediate" },
+  "Memory & the Allocator": { id: "memory-allocator", level: "advanced" },
+  "Signature Schemes": { id: "signatures", level: "intermediate" },
 };
 export const levelMeta: Record<Level, { label: string; color: string }> = {
   beginner: { label: "Beginner", color: "var(--sol-green)" },

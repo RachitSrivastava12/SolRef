@@ -1233,6 +1233,67 @@ export const quizBank: Record<string, QuizQuestion[]> = {
       explain: "On a global market, one viral mint makes every tx expensive. Local fee markets confine that blast radius to the accounts actually being fought over.",
     },
   ],
+
+  "memory-allocator": [
+    {
+      q: "What does the default global allocator in a Solana program do when memory is freed/dropped?",
+      options: [
+        "Returns it to the heap for reuse",
+        "Nothing — it's a bump allocator; deallocation is a no-op",
+        "Triggers garbage collection",
+        "Writes it to the account",
+      ],
+      answer: 1,
+      explain: "The default allocator is a bump allocator: it advances a pointer to allocate and never reclaims. Within one instruction, dropped memory stays consumed.",
+    },
+    {
+      q: "What is the default heap size for a program instruction, and how do you get more?",
+      options: [
+        "256 KiB; it's fixed",
+        "32 KiB; request up to 256 KiB via ComputeBudget RequestHeapFrame",
+        "1 MiB; via a bigger account",
+        "4 KiB; via a larger stack frame",
+      ],
+      answer: 1,
+      explain: "The heap is 32 KiB by default (and resets each instruction). RequestHeapFrame raises it in 1 KiB steps up to 256 KiB, for extra compute units.",
+    },
+    {
+      q: "Why does a large array declared on the stack often cause an 'access violation'?",
+      options: [
+        "Stack arrays are forbidden",
+        "Each call frame is only 4 KiB, so a big local overflows it",
+        "The heap is full",
+        "The compiler moves it to an account",
+      ],
+      answer: 1,
+      explain: "SBF stack frames are 4 KiB. A large stack-allocated array/struct overruns the frame. Keep big data in accounts or on the heap, not the stack.",
+    },
+  ],
+  signatures: [
+    {
+      q: "What signature scheme authorizes a normal Solana transaction (and sets is_signer)?",
+      options: ["Secp256k1 (ECDSA)", "Ed25519 (EdDSA over Curve25519)", "RSA", "Schnorr over secp256r1"],
+      answer: 1,
+      explain: "Transactions are signed with Ed25519. A valid signature for an account is what makes account.is_signer true inside the program.",
+    },
+    {
+      q: "How does a program verify a non-Ed25519 signature (e.g. an Ethereum or passkey signature)?",
+      options: [
+        "It re-implements the curve math in BPF",
+        "It attaches a precompile instruction (Secp256k1 / Secp256r1) and checks it ran via the Instructions sysvar",
+        "It can't — only Ed25519 works",
+        "It calls an oracle",
+      ],
+      answer: 1,
+      explain: "Verifying secp256k1/secp256r1 in BPF is impractical. You add the matching precompile instruction and confirm, via instruction introspection, that it verified the expected message and key.",
+    },
+    {
+      q: "Which precompile makes passkeys / WebAuthn login possible on Solana?",
+      options: ["Ed25519 Program", "Secp256k1 Program", "Secp256r1 Program (P-256)", "The System Program"],
+      answer: 2,
+      explain: "Passkeys and WebAuthn use the secp256r1 (P-256) curve, so the Secp256r1 precompile is what lets Solana verify those signatures — the basis for consumer account abstraction.",
+    },
+  ],
 };
 
 // ─── LLM seam ────────────────────────────────────────────────────────────────

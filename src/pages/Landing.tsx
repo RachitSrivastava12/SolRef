@@ -17,10 +17,10 @@ const PILLARS = [
 ];
 
 const INTERACTIVE = [
-  { to: "/docs/proof-of-history", label: "Proof of History clock", desc: "Watch the hash chain become a verifiable timeline." },
-  { to: "/docs/sealevel", label: "Sealevel scheduler", desc: "See which transactions run in parallel — and which serialize." },
-  { to: "/docs/priority-fees", label: "Fee estimator", desc: "Slide compute limit and price; watch the fee." },
-  { to: "/docs/tower-bft", label: "Lockout finality", desc: "Cast votes and watch finality lock in." },
+  { to: "/labs#poh", label: "Proof of History clock", desc: "Watch the hash chain become a verifiable timeline." },
+  { to: "/labs#sealevel", label: "Sealevel scheduler", desc: "See which transactions run in parallel — and which serialize." },
+  { to: "/labs#fees", label: "Fee estimator", desc: "Slide compute limit and price; watch the fee." },
+  { to: "/labs#tower", label: "Lockout finality", desc: "Cast votes and watch finality lock in." },
   { to: "/lifecycle", label: "Transaction lifecycle", desc: "Signature to finality, step by step." },
   { to: "/sandwich", label: "Sandwich simulator", desc: "Slippage, bundles, and protection." },
 ];

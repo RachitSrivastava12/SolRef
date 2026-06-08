@@ -20,6 +20,7 @@ const Learn = lazy(() => import("./pages/Learn"));
 const QuizzesIndex = lazy(() => import("./pages/QuizzesIndex"));
 const QuizPage = lazy(() => import("./pages/QuizPage"));
 const Workspace = lazy(() => import("./pages/Workspace"));
+const Labs = lazy(() => import("./pages/Labs"));
 const Resources = lazy(() => import("./pages/Resources"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -55,6 +56,7 @@ const App = () => (
             <Route path="/quizzes" element={<QuizzesIndex />} />
             <Route path="/quizzes/:id" element={<QuizPage />} />
             <Route path="/workspace" element={<Workspace />} />
+            <Route path="/labs" element={<Labs />} />
             <Route path="/resources" element={<Resources />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
