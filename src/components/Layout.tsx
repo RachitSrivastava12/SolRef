@@ -4,15 +4,14 @@ import { Search, Command, Menu, X, ArrowRight, ExternalLink, Globe } from "lucid
 import { Wordmark, SolanaMark } from "./Brand";
 import { concepts, metaFor, levelMeta, iconFor } from "../lib/concepts";
 import { searchConcepts, type SearchEntry } from "../lib/searchIndex";
-import ChatWidget from "./ChatWidget";
 
 const NAV = [
   { to: "/innovations", label: "Innovations" },
   { to: "/deep-dives", label: "Deep Dives" },
   { to: "/docs", label: "Docs" },
   { to: "/labs", label: "Labs" },
-  { to: "/workspace", label: "Workspace" },
-  { to: "/quizzes", label: "Quizzes" },
+  { to: "/learn", label: "Learn" },
+  { to: "/resources", label: "Resources" },
 ];
 
 type Hit = { kind: "concept"; e: SearchEntry } | { kind: "web"; url: string; label: string };
@@ -218,12 +217,12 @@ export default function Layout({ children, wide }: { children: ReactNode; wide?:
               </a>
             </div>
             <div style={{ display: "flex", gap: 56, flexWrap: "wrap" }}>
-              <FootCol title="Learn" links={[["Deep dives", "/deep-dives"], ["Docs", "/docs"], ["Learning path", "/learn"], ["Quizzes", "/quizzes"], ["Workspace", "/workspace"]]} />
+              <FootCol title="Learn" links={[["Deep dives", "/deep-dives"], ["Docs", "/docs"], ["Learning path", "/learn"], ["Labs", "/labs"], ["Resources", "/resources"]]} />
               <FootCol title="Build" links={[["Solana Playground", "https://beta.solpg.io"], ["Solana Docs", "https://docs.solana.com"], ["Anchor", "https://www.anchor-lang.com"], ["Cookbook", "https://solanacookbook.com"]]} ext />
             </div>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginTop: 40, paddingTop: 24, borderTop: "1px solid var(--line)" }}>
-            <span style={{ fontSize: 12, color: "var(--text-dim)" }} className="mono">{concepts.length} concepts · diagrams · quizzes · workspace</span>
+            <span style={{ fontSize: 12, color: "var(--text-dim)" }} className="mono">{concepts.length} concepts · diagrams · open reference content</span>
             <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "var(--text-dim)" }}>
               Powered by <SolanaMark size={14} /> Solana
             </span>
@@ -232,8 +231,6 @@ export default function Layout({ children, wide }: { children: ReactNode; wide?:
       </footer>
 
       {searchOpen && <CommandSearch onClose={() => setSearchOpen(false)} />}
-
-      <ChatWidget />
 
       <style>{`
         .nav-link:hover { color: var(--text) !important; background: var(--surface-2); }

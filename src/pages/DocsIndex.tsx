@@ -1,5 +1,5 @@
 import { Link, useSearchParams } from "react-router-dom";
-import { ArrowRight, AlertTriangle, BookOpen, Sparkles } from "lucide-react";
+import { ArrowRight, AlertTriangle, BookOpen } from "lucide-react";
 import Layout from "../components/Layout";
 import DocsNav from "../components/DocsNav";
 import { concepts, categories, metaFor, iconFor, levelMeta } from "../lib/concepts";
@@ -27,7 +27,6 @@ function ConceptRow({ title, tag }: { title: string; tag?: string }) {
             <AlertTriangle size={12} /> {c.commonMistakes.length}
           </span>
         )}
-        <span className="doc-muted" style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><Sparkles size={12} /> quiz</span>
         <ArrowRight size={14} style={{ color: "var(--text-dim)" }} />
       </div>
     </Link>

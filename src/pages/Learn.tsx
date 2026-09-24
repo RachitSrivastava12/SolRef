@@ -1,14 +1,9 @@
 import { Link } from "react-router-dom";
-import { CheckCircle2, Circle, ArrowRight, Trophy, GraduationCap } from "lucide-react";
+import { ArrowRight, BookOpen, GraduationCap } from "lucide-react";
 import Layout from "../components/Layout";
 import { concepts, conceptsByLevel, metaFor, iconFor, levelMeta, levelOrder } from "../lib/concepts";
-import { useProgress } from "../lib/useProgress";
 
 export default function Learn() {
-  const { progress, isMastered } = useProgress();
-  const masteredCount = concepts.filter((c) => isMastered(metaFor(c.title).id)).length;
-  const pct = Math.round((masteredCount / concepts.length) * 100);
-
   return (
     <Layout>
       <div className="shell" style={{ position: "relative", zIndex: 1, paddingTop: 56 }}>
@@ -17,21 +12,15 @@ export default function Learn() {
             <div className="eyebrow reveal">Guided path</div>
             <h1 className="page-title reveal" style={{ animationDelay: ".05s" }}>Learning path.</h1>
             <p className="page-subtitle reveal" style={{ animationDelay: ".1s" }}>
-              Work top to bottom. Pass a concept quiz at 70%+ and it locks in as mastered.
+              Work top to bottom: beginner references first, then the runtime, validator hot path, and frontier upgrades.
             </p>
           </div>
           <div className="card reveal" style={{ padding: 20, minWidth: 240, animationDelay: ".15s" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-              <Trophy size={18} style={{ color: "var(--sol-green)" }} />
-              <span style={{ fontSize: 14, fontWeight: 600 }}>Your progress</span>
+              <BookOpen size={18} style={{ color: "var(--sol-green)" }} />
+              <span style={{ fontSize: 14, fontWeight: 600 }}>Reference scope</span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, fontFamily: "var(--font-mono)", marginBottom: 7 }}>
-              <span style={{ color: "var(--text-dim)" }}>{masteredCount} of {concepts.length} mastered</span>
-              <span style={{ color: "var(--sol-green)" }}>{pct}%</span>
-            </div>
-            <div style={{ height: 8, borderRadius: 99, background: "var(--surface-2)", overflow: "hidden" }}>
-              <div style={{ height: "100%", width: `${pct}%`, background: "var(--neon-green)", transition: "width .35s var(--ease-out)" }} />
-            </div>
+            <div style={{ fontSize: 12.5, fontFamily: "var(--font-mono)", color: "var(--text-dim)" }}>{concepts.length} open reference pages</div>
           </div>
         </div>
 
@@ -46,12 +35,10 @@ export default function Learn() {
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {conceptsByLevel(lvl).map((c) => {
                   const id = metaFor(c.title).id;
-                  const mastered = isMastered(id);
-                  const visited = progress.visited.includes(id);
                   return (
                     <Link key={id} to={`/docs/${id}`} className="card card-lift" style={{ padding: "11px 14px", display: "flex", alignItems: "center", gap: 11, background: "var(--surface-2)" }}>
-                      {mastered ? <CheckCircle2 size={16} style={{ color: "var(--sol-green)", flexShrink: 0 }} /> : <Circle size={16} style={{ color: visited ? "var(--text-mid)" : "var(--line-2)", flexShrink: 0 }} />}
-                      <span style={{ flex: 1, fontSize: 13.5, fontWeight: 500, color: mastered ? "var(--sol-green)" : "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.title}</span>
+                      <span style={{ color: "var(--sol-green)", opacity: .75, flexShrink: 0, display: "flex" }}>{iconFor(c.icon)}</span>
+                      <span style={{ flex: 1, fontSize: 13.5, fontWeight: 500, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.title}</span>
                       <span style={{ color: "var(--sol-green)", opacity: .6, flexShrink: 0, display: "flex" }}>{iconFor(c.icon)}</span>
                     </Link>
                   );

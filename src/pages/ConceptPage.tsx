@@ -2,17 +2,15 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
   ArrowLeft, ArrowRight, Copy, Check, ExternalLink,
-  Lightbulb, AlertTriangle, Sparkles, Terminal, CheckCircle2, Target, ChevronRight,
+  Lightbulb, AlertTriangle, ChevronRight,
 } from "lucide-react";
 import Layout from "../components/Layout";
 import DocsNav from "../components/DocsNav";
 import { concepts, conceptById, metaFor, iconFor, levelMeta } from "../lib/concepts";
-import { tasksFor } from "../lib/tasks";
 import { chapterConcepts, chapterForConceptId } from "../lib/chapters";
 import { deepDiveFor } from "../lib/deepDives";
 import ConceptDiagram, { hasDiagram } from "../lib/Diagrams";
 import ConceptLab, { hasLab } from "../lib/Labs";
-import { useProgress } from "../lib/useProgress";
 
 function useActiveSection(ids: string[]) {
   const [active, setActive] = useState(ids[0]);
@@ -35,13 +33,11 @@ function useActiveSection(ids: string[]) {
 export default function ConceptPage() {
   const { id = "" } = useParams();
   const concept = conceptById(id);
-  const { visit, isMastered } = useProgress();
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => { if (concept) { visit(metaFor(concept.title).id); window.scrollTo(0, 0); } }, [id]); // eslint-disable-line
+  useEffect(() => { window.scrollTo(0, 0); }, [id]);
 
   const m = concept ? metaFor(concept.title) : null;
-  const conceptTasks = concept ? tasksFor(m!.id) : [];
   const deepDive = m ? deepDiveFor(m.id) : undefined;
   const chapter = m ? chapterForConceptId(m.id) : undefined;
   const chapterItems = chapter ? chapterConcepts(chapter) : [];
@@ -57,10 +53,9 @@ export default function ConceptPage() {
       ["facts", "Key facts"],
       concept.commonMistakes?.length && ["mistakes", "Common mistakes"],
       ["code", "Code"],
-      conceptTasks.length > 0 && ["practice", "Practice"],
       concept.links?.length && ["resources", "Resources"],
     ].filter(Boolean) as [string, string][];
-  }, [concept, m, conceptTasks.length, deepDive]);
+  }, [concept, m, deepDive]);
 
   const active = useActiveSection(toc.map((t) => t[0]));
 
@@ -78,7 +73,6 @@ export default function ConceptPage() {
   const idx = concepts.findIndex((c) => metaFor(c.title).id === m.id);
   const prev = idx > 0 ? concepts[idx - 1] : null;
   const next = idx < concepts.length - 1 ? concepts[idx + 1] : null;
-  const mastered = isMastered(m.id);
   const isRust = /fn\s|use solana_program|entrypoint!/.test(concept.code);
 
   const copy = () => { try { navigator.clipboard.writeText(concept.code); } catch { /* noop */ } setCopied(true); setTimeout(() => setCopied(false), 1800); };
@@ -115,7 +109,6 @@ export default function ConceptPage() {
             <span className="doc-muted">{concept.tag}</span>
             <span style={{ width: 3, height: 3, borderRadius: 99, background: "var(--line-3)" }} />
             <span className="doc-muted" style={{ color: levelMeta[m.level].color }}>{levelMeta[m.level].label}</span>
-            {mastered && <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--neon-green)", fontFamily: "var(--font-mono)", marginLeft: 4 }}><CheckCircle2 size={12} /> mastered</span>}
           </div>
 
           <h1 id="overview" className="concept-title" style={{ scrollMarginTop: "calc(var(--nav-h) + 8px)" }}>{concept.title}</h1>
@@ -257,30 +250,6 @@ export default function ConceptPage() {
             </div>
           </section>
 
-          {/* practice tasks */}
-          {conceptTasks.length > 0 && (
-            <section id="practice" style={{ scrollMarginTop: "calc(var(--nav-h) + 8px)", marginBottom: 44 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 8 }}>
-                <Target size={17} style={{ color: "var(--neon-green)" }} />
-                <h2 className="doc-h2">Practice to master this</h2>
-              </div>
-              <p style={{ fontSize: 14.5, color: "var(--text-dim)", marginBottom: 18 }}>Open a task in the workspace — write the code, get hints, and have it evaluated.</p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {conceptTasks.map((t) => (
-                  <Link key={t.id} to={`/workspace?c=${m.id}&task=${t.id}`} className="card card-lift" style={{ padding: "16px 18px", display: "flex", alignItems: "center", gap: 14 }}>
-                    <span style={{ width: 38, height: 38, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--surface-2)", color: "var(--text)", flexShrink: 0 }}><Terminal size={17} /></span>
-                    <span style={{ flex: 1, minWidth: 0 }}>
-                      <span style={{ display: "block", fontSize: 14.5, fontWeight: 600 }}>{t.title}</span>
-                      <span style={{ fontSize: 12.5, color: "var(--text-dim)", marginTop: 2, display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>{t.goal}</span>
-                    </span>
-                    <span className="mono" style={{ fontSize: 10.5, padding: "3px 9px", borderRadius: 99, border: "1px solid var(--line-2)", color: "var(--text-dim)", flexShrink: 0 }}>{t.difficulty}</span>
-                    <ArrowRight size={16} style={{ color: "var(--text-dim)", flexShrink: 0 }} />
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
-
           {/* resources */}
           {concept.links?.length ? (
             <section id="resources" style={{ scrollMarginTop: "calc(var(--nav-h) + 8px)", marginBottom: 44 }}>
@@ -295,18 +264,6 @@ export default function ConceptPage() {
               </div>
             </section>
           ) : null}
-
-          {/* quiz CTA */}
-          <Link to={`/quizzes/${m.id}`} className="grad-border" style={{ borderRadius: "var(--r-md)", padding: 20, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, marginBottom: 40 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <span style={{ width: 40, height: 40, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--surface-2)", border: "1px solid var(--line)", color: "var(--neon-green)", flexShrink: 0 }}><Sparkles size={18} /></span>
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 650 }}>Test yourself on {concept.title}</div>
-                <div style={{ fontSize: 13, color: "var(--text-dim)" }}>Grounded questions · pass 70% to master this concept</div>
-              </div>
-            </div>
-            <ArrowRight size={18} style={{ color: "var(--text)", flexShrink: 0 }} />
-          </Link>
 
           {/* prev / next */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, paddingTop: 8, borderTop: "1px solid var(--line)" }} className="prevnext">
@@ -333,12 +290,6 @@ export default function ConceptPage() {
               <a key={anchor} href={`#${anchor}`} className={`docs-toc__link ${active === anchor ? "on" : ""}`}>{label}</a>
             ))}
           </nav>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {conceptTasks.length > 0 && (
-              <Link to={`/workspace?c=${m.id}&task=${conceptTasks[0].id}`} className="btn btn-surface" style={{ width: "100%", justifyContent: "center", fontSize: 12.5, minHeight: 36 }}><Terminal size={13} /> Practice</Link>
-            )}
-            <Link to={`/quizzes/${m.id}`} className="btn btn-grad" style={{ width: "100%", justifyContent: "center", fontSize: 12.5, minHeight: 36 }}><Sparkles size={13} /> Take the quiz</Link>
-          </div>
         </aside>
       </div>
 

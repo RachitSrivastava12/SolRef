@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, ExternalLink, BookOpen, GraduationCap, Terminal, Sparkles } from "lucide-react";
+import { ArrowRight, ExternalLink, BookOpen, FileText, Route, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
 import Layout from "../components/Layout";
 import RaysHero from "../components/RaysHero";
@@ -10,10 +10,10 @@ import { chapters, hotPathStages } from "../lib/chapters";
 const RPC = (import.meta.env.VITE_SOLANA_RPC as string) || "https://api.mainnet-beta.solana.com";
 
 const PILLARS = [
+  { to: "/docs", icon: <FileText size={18} />, label: "Reference", title: `${concepts.length} concept pages`, desc: "Focused, source-aware references for Solana internals." },
   { to: "/deep-dives", icon: <BookOpen size={18} />, label: "Depth", title: `${chapters.length} study tracks`, desc: "A curated path through the validator hot path and core internals." },
-  { to: "/innovations", icon: <Sparkles size={18} />, label: "Architecture", title: `${innovations.length} innovations`, desc: "The protocol mechanisms and frontier upgrades behind Solana throughput." },
-  { to: "/workspace", icon: <Terminal size={18} />, label: "Practice", title: "Workspace", desc: "Tasks, hints, and AI review in a real editor." },
-  { to: "/quizzes", icon: <GraduationCap size={18} />, label: "Recall", title: "Quizzes", desc: "Instant docs-grounded checks for each concept." },
+  { to: "/innovations", icon: <Sparkles size={18} />, label: "Architecture", title: `${innovations.length} protocol systems`, desc: "The mechanisms and frontier upgrades behind Solana throughput." },
+  { to: "/learn", icon: <Route size={18} />, label: "Path", title: "Guided reading", desc: "Beginner, intermediate, and advanced references in order." },
 ];
 
 const INTERACTIVE = [
@@ -189,7 +189,7 @@ export default function Landing() {
             <p style={{ color: "var(--text-mid)", fontSize: 14.5, maxWidth: 440, margin: "0 auto 22px" }}>Hot path first, then consensus/finality, then runtime and state.</p>
             <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
               <Link to="/deep-dives" className="btn btn-grad">Start deep dives <ArrowRight size={16} /></Link>
-              <Link to="/workspace" className="btn btn-ghost">Try the workspace <Terminal size={15} /></Link>
+              <Link to="/docs" className="btn btn-ghost">Open reference <FileText size={15} /></Link>
             </div>
           </div>
         </div>
