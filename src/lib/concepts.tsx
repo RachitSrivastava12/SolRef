@@ -639,7 +639,7 @@ sorted.slice(0, 5).forEach(v => {
 });
 
 // ── INSPECT RPC CONFIRMATION STATUS ─────────────────────────────
-// `processed` is provisional; `confirmed` and `finalized` describe the same
+// processed is provisional; confirmed and finalized describe the same
 // consensus state on mainnet after Alpenglow.
 
 async function trackConfirmationStages(txSig: string) {
@@ -2273,7 +2273,7 @@ async function findBestValidators() {
 import { Connection } from "@solana/web3.js";
 const conn = new Connection("https://api.mainnet-beta.solana.com");
 
-// `processed` is provisional. On mainnet, `confirmed` and `finalized`
+// processed is provisional. On mainnet, confirmed and finalized
 // now describe the same Alpenglow consensus state.
 const sig = "...";
 await conn.confirmTransaction(sig, "finalized");
