@@ -6,10 +6,10 @@ import ConceptLab from "../lib/Labs";
 import { conceptById, metaFor } from "../lib/concepts";
 
 const LABS = [
-  { id: "proof-of-history", anchor: "poh", title: "Proof of History clock", blurb: "Play the SHA-256 chain forward and stamp a transaction into the stream — see why time is just the hash count." },
+  { id: "proof-of-history", anchor: "poh", title: "Proof of History (Tower-era model)", blurb: "Play the SHA-256 chain forward and see how PoH supplied Solana's clock under Tower BFT. Alpenglow changed block pacing and timestamp semantics." },
   { id: "sealevel", anchor: "sealevel", title: "Sealevel scheduler", blurb: "Change which account each transaction writes and watch what runs in parallel vs. what serializes." },
   { id: "priority-fees", anchor: "fees", title: "Fee & compute estimator", blurb: "Slide the compute-unit limit and price; watch the base + priority fee update live." },
-  { id: "tower-bft", anchor: "tower", title: "Tower lockout finality", blurb: "Cast votes and watch the lockout double — 2, 4, 8, 16, 32 — until a slot is rooted." },
+  { id: "tower-bft", anchor: "tower", title: "Tower lockouts (retired model)", blurb: "Replay the lockout mechanism Tower BFT used before Votor replaced it on mainnet." },
 ];
 
 const MORE = [

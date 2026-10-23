@@ -8,7 +8,7 @@ import { deepDiveFor } from "./deepDives";
 // frontrunning → MEV, soulbound → token extensions, etc.). Keyed by concept id.
 export const ALIASES: Record<string, string> = {
   transactions: "tx signature blockhash nonce expiry atomic 1232 bytes fee payer serialize sign send durable nonce",
-  "blocks-slots": "slot block time 400ms skipped leader schedule block height native clock",
+  "blocks-slots": "slot block time 200ms 5 slots per second skipped leader schedule block height native clock Alpenglow finality",
   "proof-of-history": "poh clock vdf verifiable delay function sha256 hash chain timestamp ordering",
   "tx-lifecycle": "lifecycle confirm confirmation finality processed confirmed finalized commitment retry dropped",
   "gulf-stream": "mempool no mempool pending pool forward upcoming leaders frontrun prevention",
@@ -27,7 +27,7 @@ export const ALIASES: Record<string, string> = {
   clusters: "cluster mainnet beta devnet testnet localnet network airdrop endpoints",
   sandwich: "sandwich attack slippage frontrun backrun protection mev bundle private flow",
   "validator-economics": "validator economics inflation rewards apy staking commission vote cost yield delegators stakers",
-  alpenglow: "alpenglow votor rotor bls certificate finality 150ms new consensus 2025 upgrade fast finality",
+  alpenglow: "alpenglow live mainnet epoch 1064 slot 459653000 tower retired votor bls certificate off-chain direct validator votes rotor later unscheduled turbine finality 150ms confirmed finalized same PoH no longer paces blocks clock timestamp Agave 4.3 VAT",
   firedancer: "firedancer frankendancer agave validator client jump c rust client diversity sig syndica",
   doublezero: "doublezero fiber network internet layer multicast latency 2z dedicated bandwidth",
   "async-execution": "async execution ape block limit compute unit simd 0256 0286 60m 100m throughput tps scaling million",

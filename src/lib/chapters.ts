@@ -29,13 +29,13 @@ export const chapters: Chapter[] = [
     id: "consensus-finality",
     title: "Consensus & Finality",
     domain: "PoH, Tower BFT, voting, Alpenglow",
-    summary: "Separate the clock, the fork-choice rules, validator votes, commitment levels, and the Alpenglow finality redesign.",
-    outcome: "You can talk about PoH, Tower, roots, and Alpenglow without mixing clocking, ordering, and consensus.",
+    summary: "Trace PoH's former role, Tower's lockouts, Votor certificates, current commitment levels, and the Alpenglow migration.",
+    outcome: "You can distinguish the retired Tower model from live Votor consensus and explain what changed for apps and infrastructure.",
     conceptIds: ["blocks-slots", "proof-of-history", "tower-bft", "epochs-validators", "alpenglow"],
-    checkpoints: ["Slot vs block", "PoH as ordering clock", "Tower lockouts", "Votor certificates", "Commitment semantics"],
+    checkpoints: ["Slot vs block", "PoH in the Tower era", "Tower lockouts", "Votor certificates", "Current commitment semantics"],
     sourceNotes: [
-      "PoH gives Tower a ledger-encoded clock; Tower uses that clock for vote lockouts and fork commitment.",
-      "Alpenglow belongs after Tower: it is easier to understand as a redesign of the current voting/finality path.",
+      "Under Tower, PoH supplied the ledger-encoded clock used for vote lockouts; PoH no longer paces block production under Alpenglow.",
+      "Votor replaced Tower on mainnet in epoch 1064; Rotor remains planned for a later, unscheduled phase.",
     ],
   },
   {
@@ -92,15 +92,15 @@ export const chapters: Chapter[] = [
   },
   {
     id: "frontier-2025",
-    title: "Frontier · 2025",
+    title: "Frontier · 2025–26",
     domain: "Alpenglow, Firedancer, DoubleZero, async execution",
-    summary: "The 2025 breakthroughs changing Solana's ceiling: a new consensus, a second validator client, a dedicated network layer, and asynchronous execution.",
-    outcome: "You can explain what Alpenglow, Firedancer, and DoubleZero each change — and why finality, client diversity, and propagation are separate wins, not one feature.",
+    summary: "Recent protocol and infrastructure work: live Alpenglow consensus, validator client diversity, a dedicated network layer, and asynchronous execution research.",
+    outcome: "You can explain what Alpenglow, Firedancer, and DoubleZero change, and how finality, client diversity, and propagation affect different parts of the network.",
     conceptIds: ["alpenglow", "firedancer", "doublezero", "async-execution"],
     checkpoints: ["Votor vs Tower voting", "Why client diversity matters", "Dedicated fiber vs the public internet", "Ordering decoupled from execution"],
     sourceNotes: [
       "These are independent levers: Alpenglow is latency, Firedancer is resilience + throughput headroom, DoubleZero is propagation, async execution is the scaling re-architecture.",
-      "Read Alpenglow after Tower BFT — it is a redesign of the existing voting/finality path, not a new runtime.",
+      "Alpenglow replaced Tower BFT's voting and finality path; it did not replace the SVM runtime.",
     ],
   },
 ];

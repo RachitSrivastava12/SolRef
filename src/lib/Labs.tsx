@@ -27,7 +27,7 @@ const btn: React.CSSProperties = {
 };
 const btnPrimary: React.CSSProperties = { ...btn, background: A, color: "#04140d", border: "none" };
 
-// ── 1. Proof of History — verifiable clock ────────────────────────────────
+// ── 1. Proof of History — Tower-era clock model ──────────────────────────
 function PohClock() {
   const [hashes, setHashes] = useState(3);
   const [playing, setPlaying] = useState(false);
@@ -43,7 +43,7 @@ function PohClock() {
   const reset = () => { setHashes(3); setStamps([]); setPlaying(false); };
 
   return (
-    <LabShell title="Proof of History — a verifiable clock" hint="Each hash is sha256 of the previous one, so the chain can't be fast-forwarded — its length is proof that time passed. Stamping a transaction fixes its position (its order) forever. Generation is one slow core; verification is parallel.">
+    <LabShell title="Proof of History — Tower-era clock model" hint="This model shows how PoH worked with Tower BFT. Since Alpenglow activated, PoH no longer paces block production, and the Clock sysvar timestamp has a new source.">
       <div style={{ display: "flex", alignItems: "center", gap: 6, overflowX: "auto", paddingBottom: 8 }}>
         {window6.map((n, i) => {
           const stamped = stamps.includes(n);
@@ -157,7 +157,7 @@ function FeeEstimator() {
   );
 }
 
-// ── 4. Tower BFT — exponential lockout to finality ────────────────────────
+// ── 4. Tower BFT — retired lockout model ─────────────────────────────────
 function TowerLockout() {
   const [votes, setVotes] = useState(0);
   const [blocked, setBlocked] = useState(false);
@@ -166,7 +166,7 @@ function TowerLockout() {
   const reset = () => { setVotes(0); setBlocked(false); };
 
   return (
-    <LabShell title="Tower BFT — lockouts that compound into finality" hint="Each vote on a fork DOUBLES how long you're locked out of competing forks (2 → 4 → 8 → 16 → 32 slots). After 32 the slot is rooted — reversing it would cost the supermajority their stake. Switching forks early is cheap; switching late is economically impossible.">
+    <LabShell title="Tower BFT — retired lockout model" hint="This historical simulation shows Tower BFT, which Alpenglow replaced on mainnet in October 2026. Tower lockouts doubled (2 → 4 → 8 → 16 → 32 slots) until the slot rooted; Votor now finalizes with validator votes and certificates.">
       <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
         {Array.from({ length: 5 }, (_, i) => i + 1).map((n) => {
           const cast = n <= votes;

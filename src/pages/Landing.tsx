@@ -17,10 +17,10 @@ const PILLARS = [
 ];
 
 const INTERACTIVE = [
-  { to: "/labs#poh", label: "Proof of History clock", desc: "Watch the hash chain become a verifiable timeline." },
+  { to: "/labs#poh", label: "Proof of History (Tower-era model)", desc: "See how PoH supplied Solana's clock under the retired Tower design." },
   { to: "/labs#sealevel", label: "Sealevel scheduler", desc: "See which transactions run in parallel — and which serialize." },
   { to: "/labs#fees", label: "Fee estimator", desc: "Slide compute limit and price; watch the fee." },
-  { to: "/labs#tower", label: "Lockout finality", desc: "Cast votes and watch finality lock in." },
+  { to: "/labs#tower", label: "Tower lockouts (historical)", desc: "Explore the retired lockout path Votor replaced on mainnet." },
   { to: "/lifecycle", label: "Transaction lifecycle", desc: "Signature to finality, step by step." },
   { to: "/sandwich", label: "Sandwich simulator", desc: "Slippage, bundles, and protection." },
 ];

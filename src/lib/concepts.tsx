@@ -38,7 +38,7 @@ export const concepts: Concept[] = [
     desc: "A Solana transaction bundles one or more instructions into a single atomic unit. Either ALL instructions succeed, or ALL fail — there's no partial execution. Every tx includes a recent blockhash (acts as a nonce + expiry), a fee payer, and at least one signature.",
     details: [
       "Max 1232 bytes per tx (hard limit)",
-      "Recent blockhash expires in ~150 slots (~60s)",
+      "Recent blockhash expires in ~150 slots (~30s at the 200ms mainnet slot target)",
       "Fee paid in lamports (1 SOL = 10⁹ lamports)",
       "Versioned (v0) & legacy formats supported",
       "Legacy tx fits ~35 accounts; v0 + ALTs reach 256",
@@ -126,15 +126,16 @@ if (serialized.length > 1232) throw new Error("Tx too large!");`,
     icon: "Layers",
     tag: "Core Infra",
     title: "Blocks & Slots",
-    desc: "Slots are fixed ~400ms time windows during which a designated leader validator produces a block. Not every slot produces a block — if the leader is offline or slow, the slot is 'skipped'. A block is an ordered, confirmed set of transactions anchored to a specific slot number.",
+    desc: "Slots target 200ms on mainnet after Solana's reduced-slot-time rollout completed in October 2026. A designated leader produces a block for its slot; under Alpenglow, a slot can carry multiple candidate banks. Offline or slow leaders can cause skipped slots. Alpenglow finality is a separate process and targets roughly 150ms.",
     details: [
-      "~400ms per slot (network target)",
-      "~2.5 slots created per second on average",
+      "200ms per slot on mainnet since October 2026",
+      "About 5 slots per second at the current target",
       "Leader schedule is rotated every epoch",
       "Skipped slots ≠ lost data — tx just wasn't included",
-      "~400–460ms actual average block time on mainnet",
+      "Observed block interval varies with skipped slots; the slot target is 200ms",
+      "Alpenglow slots can carry multiple candidate banks; Geyser consumers should track `bank_id`",
       "Block header includes parent slot hash",
-      "Slot = position in the chain; Block = data at that slot",
+      "Slot = position in the chain; blocks are candidate data produced for that slot",
       "Slot number is the primary time reference on Solana"
     ],
     whyItMatters: "Slots are Solana's fundamental unit of time. Everything — from transaction expiry to leader schedules to staking rewards — is measured in slots. When your tx includes a blockhash from slot N, it's valid until slot N+150. If you use 'slot' as a timestamp in your program, you're working with the blockchain's native clock.",
@@ -151,10 +152,10 @@ const slot = await connection.getSlot("finalized");
 console.log("Current finalized slot:", slot);
 
 // Different commitment levels return different slots:
-const processedSlot  = await connection.getSlot("processed");  // latest seen
-const confirmedSlot  = await connection.getSlot("confirmed");  // 2/3 voted
-const finalizedSlot  = await connection.getSlot("finalized");  // rooted (irreversible)
-// processedSlot >= confirmedSlot >= finalizedSlot (always)
+const processedSlot  = await connection.getSlot("processed");  // latest seen; provisional
+const confirmedSlot  = await connection.getSlot("confirmed");  // Alpenglow consensus state
+const finalizedSlot  = await connection.getSlot("finalized");  // same consensus state on mainnet
+// processedSlot >= confirmedSlot; confirmed and finalized now describe the same state
 
 // ── GET BLOCK DATA ───────────────────────────────────────────────
 const block = await connection.getBlock(slot, {
@@ -191,7 +192,7 @@ connection.removeSlotChangeListener(subId);
 // ── GET SLOT FOR A SPECIFIC TIMESTAMP ───────────────────────────
 // Solana doesn't have a direct API for this, but you can estimate:
 const epochInfo = await connection.getEpochInfo();
-const slotsPerSecond = 2.5; // approximate
+const slotsPerSecond = 5; // approximate at the 200ms mainnet target
 const secsAgo = 3600; // 1 hour ago
 const estimatedSlot = epochInfo.absoluteSlot - Math.floor(secsAgo * slotsPerSecond);
 console.log("Approx slot 1hr ago:", estimatedSlot);`,
@@ -204,31 +205,33 @@ console.log("Approx slot 1hr ago:", estimatedSlot);`,
     icon: "Hash",
     tag: "Consensus",
     title: "Proof of History (PoH)",
-    desc: "PoH is NOT a consensus mechanism — it's a cryptographic clock. It's a Verifiable Delay Function (VDF) based on SHA-256 hash chaining that proves time has passed between events. The leader runs PoH continuously, embedding transactions into the hash sequence. This creates a verifiable, tamper-proof timeline BEFORE blocks even reach consensus.",
+    desc: "Proof of History is a sequential SHA-256 hash chain. Under Tower BFT it acted as Solana's cryptographic clock and helped pace ordered ledger entries. Since Alpenglow activated, PoH no longer paces block production; do not apply the old Tower-era timing model to current blocks or timestamps.",
     details: [
       "SHA-256 hash chain: output N feeds into input N+1",
-      "Slots are the ~400ms window; PoH provides ordered hashes/entries inside the slot machinery",
-      "The leader produces the sequence sequentially; validators can verify recorded hashes in parallel",
-      "Gives Tower a ledger-encoded clock for timeouts and vote lockouts",
-      "PoH runs inside the leader's CPU — not on-chain storage",
-      "NOT a consensus mechanism — Tower BFT handles consensus",
-      "Allows Solana to skip round-trip messaging for time agreement",
-      "Sequence counter provides total ordering of all events"
+      "Tower-era Solana used PoH to pace ledger entries; mainnet slots are now 200ms after a separate slot-time rollout",
+      "Under Tower, the leader produced the sequence sequentially; validators could verify recorded hashes in parallel",
+      "Tower used PoH as a ledger-encoded clock for timeouts and vote lockouts",
+      "Alpenglow no longer uses PoH to pace block production; tick entries are no longer in the shred stream",
+      "Tower-era PoH ran inside validator software; it was not on-chain storage",
+      "PoH is not consensus: Tower BFT was replaced by Votor on mainnet",
+      "The Clock sysvar timestamp has a new source under Alpenglow; do not assume its old derivation",
+      "Do not assume every current ordering or timing property is a PoH hash count"
     ],
-    whyItMatters: "Traditional blockchains (like Ethereum) need validators to agree on time via messaging rounds. Solana's PoH removes this bottleneck. The leader timestamps every transaction into the hash chain, so validators can verify order without communicating. This is why Solana can achieve sub-second block times — there's no waiting for 'what time is it?' consensus.",
+    whyItMatters: "PoH explains the design Tower BFT used for years: a sequential hash chain let validators verify elapsed time without a separate time-agreement round. Alpenglow changed that model. Votor now handles consensus, PoH no longer paces block production, and the Clock sysvar timestamp has a new source. Slot time is 200ms because of a separate rollout, not because of PoH.",
     commonMistakes: [
-      "Confusing PoH with consensus — PoH is just timestamping, Tower BFT is consensus",
+      "Confusing PoH with consensus — Tower BFT is historical; Votor is live on mainnet",
       "Thinking PoH prevents double-spends — it doesn't, consensus does",
+      "Assuming PoH still paces mainnet block production or supplies the Clock sysvar timestamp",
       "Assuming PoH is stored on-chain — it's ephemeral, only the block hashes persist"
     ],
-    code: `// PoH runs inside validators — you can't call it directly.
-// But you can OBSERVE its effects and use it intelligently:
+    code: `// This snippet describes Tower-era PoH; you can't call it directly.
+// Current mainnet block pacing and timestamps use the Alpenglow model:
 
 import { Connection } from "@solana/web3.js";
 const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
 
-// ── OBSERVE PoH VIA PERFORMANCE SAMPLES ──────────────────────────
-// PoH produces the slot timing — monitor it here:
+// ── OBSERVE CURRENT SLOT TIMING VIA PERFORMANCE SAMPLES ──────────
+// Monitor observed slot timing here. PoH no longer paces mainnet block production:
 const perfSamples = await connection.getRecentPerformanceSamples(60);
 
 perfSamples.forEach(s => {
@@ -245,7 +248,7 @@ perfSamples.forEach(s => {
 });
 
 // ── USE THE ON-CHAIN CLOCK SYSVAR ────────────────────────────────
-// In Anchor programs, PoH's slot counter is accessible via Clock:
+// In Anchor programs, the current slot is accessible via Clock:
 /*
 use anchor_lang::prelude::*;
 
@@ -254,10 +257,10 @@ pub mod my_program {
     pub fn use_clock(ctx: Context<UseClock>) -> Result<()> {
         let clock = Clock::get()?;
 
-        // Slot from PoH — total slots since genesis
+        // Slot number — total slots since genesis
         msg!("Current slot: {}", clock.slot);
 
-        // Unix timestamp (derived from PoH + known genesis time)
+        // Unix timestamp. Alpenglow changed its source; do not assume PoH derivation.
         msg!("Unix timestamp: {}", clock.unix_timestamp);
 
         // Epoch number (each epoch = ~432,000 slots)
@@ -275,20 +278,20 @@ pub mod my_program {
 */
 
 // ── VERIFY TRANSACTION ORDER ─────────────────────────────────────
-// PoH gives every tx a position in the global sequence
-// You can verify ordering via slot + tx index within block:
+// Inspect a transaction's position in the returned block data:
 const block = await connection.getBlock(slot, {
   maxSupportedTransactionVersion: 0,
   transactionDetails: "signatures",
 });
 
-// Txs within a block are in PoH-determined order
+// Do not infer current block ordering from the old Tower-era PoH model.
 block?.signatures.forEach((sig, index) => {
   console.log(\`Position \${index} in slot \${slot}: \${sig}\`);
 });`,
     links: [
       { label: "PoH Original Whitepaper", url: "https://solana.com/solana-whitepaper.pdf" },
       { label: "Solana Architecture Blog Post", url: "https://solana.com/news/8-innovations-that-make-solana-the-first-web-scale-blockchain" },
+      { label: "Solana Foundation — Alpenglow changes to PoH and the Clock sysvar", url: "https://solana.com/upgrades/alpenglow" },
       { label: "Clock Sysvar Docs", url: "https://docs.solana.com/developing/runtime-facilities/sysvars#clock" },
     ],
   },
@@ -296,18 +299,18 @@ block?.signatures.forEach((sig, index) => {
     icon: "Activity",
     tag: "Data Flow",
     title: "Transaction Lifecycle",
-    desc: "A transaction goes through distinct states: Client signs & sends tx → RPC validates & forwards to leader via Gulf Stream → leader executes in slot → block propagated via Turbine → validators vote via Tower BFT → finality at 2/3 supermajority stake. Understanding each stage helps you build robust retry logic and avoid 'my tx disappeared' bugs.",
+    desc: "A transaction goes through distinct states: client signs and sends it, an RPC forwards it to a leader, the leader executes it, Turbine propagates the block, and Votor validators exchange votes and certificates. On mainnet after Alpenglow, `confirmed` and `finalized` describe the same state; `processed` remains provisional. Understanding each stage helps you build reliable retry logic.",
     details: [
       "Processed: leader received it (no guarantee of inclusion)",
-      "Confirmed: 2/3 stake voted on the block (fast finality for UX)",
-      "Finalized: rooted after 32 confirmations (irreversible forever)",
-      "Blockhash expiry creates implicit tx timeout (~60 seconds)",
+      "Confirmed and finalized now describe the same Alpenglow consensus state",
+      "Votor finalizes with off-chain validator votes and aggregate certificates, rather than 32 Tower lockouts",
+      "Blockhash expiry creates an implicit tx timeout (~30 seconds at the 200ms mainnet slot target)",
       "RPC preflight simulates tx before broadcasting",
       "sendTransaction ≠ confirmed — you must poll separately",
       "Transactions can drop at RPC, network, or leader layer",
       "Use lastValidBlockHeight for reliable expiry detection"
     ],
-    whyItMatters: "90% of 'my transaction is stuck/dropped' bugs come from not understanding this lifecycle. The most critical insight: Solana has NO mempool — if the leader drops your tx, it's gone. You must implement retry logic yourself. The blockhash expiry window is your friend: if not confirmed within ~60s, it's safe to retry.",
+    whyItMatters: "Solana has no public mempool: if a leader drops a transaction, clients may need to retry before its blockhash expires. Alpenglow changed the consensus stage and commitment semantics: `processed` is provisional, while `confirmed` and `finalized` now report the same state on mainnet.",
     commonMistakes: [
       "Calling sendAndConfirmTransaction with no timeout — it can hang forever",
       "Not tracking lastValidBlockHeight — you won't know when to stop retrying",
@@ -517,16 +520,17 @@ const connection = new Connection("https://api.mainnet-beta.solana.com", "confir
 
 // ── OBSERVE TURBINE PROPAGATION LATENCY ──────────────────────────
 // The difference between "processed" and "confirmed" slots
-// reflects Turbine propagation + Tower BFT voting time
+// reflects propagation and consensus lag; under Alpenglow, confirmed/finalized
+// describe the same state and slots may contain more than one candidate bank.
 
 async function measurePropagationLatency() {
-  const processed  = await connection.getSlot("processed");  // leader just made it
-  const confirmed  = await connection.getSlot("confirmed");  // 2/3 stake voted
-  const finalized  = await connection.getSlot("finalized");  // rooted
+  const processed  = await connection.getSlot("processed");  // latest seen; provisional
+  const confirmed  = await connection.getSlot("confirmed");  // Votor consensus state
+  const finalized  = await connection.getSlot("finalized");  // same state on mainnet
 
   console.log(\`Slot gap processed→confirmed: \${processed - confirmed} slots\`);
   console.log(\`Slot gap confirmed→finalized: \${confirmed - finalized} slots\`);
-  // Healthy network: processed-confirmed ~2-4 slots (~1-2 seconds)
+  // Compare observations over time; slot gaps vary and are not fixed finality timers.
 }
 
 // ── CHECK IF A BLOCK WAS FULLY PROPAGATED ────────────────────────
@@ -588,28 +592,28 @@ clusterNodes.slice(0, 5).forEach(node => {
     icon: "RefreshCw",
     tag: "Consensus",
     title: "Tower BFT",
-    desc: "Tower BFT is Solana's PBFT-derived consensus algorithm that uses PoH as a cryptographic clock to reduce messaging overhead. Validators vote on forks by submitting vote transactions. Each consecutive vote on the same fork exponentially increases the validator's 'lockout' — the period they cannot switch forks. This makes attacking consensus exponentially expensive.",
+    desc: "Tower BFT was Solana's PBFT-derived consensus algorithm before Alpenglow activated on mainnet in October 2026. It used PoH as a cryptographic clock and on-chain vote transactions; consecutive votes increased lockouts until blocks rooted. Votor has replaced Tower BFT on mainnet, so this page describes the historical mechanism.",
     details: [
       "Built on Practical Byzantine Fault Tolerance (PBFT)",
-      "Validators vote on blocks every slot (~400ms)",
+      "Historically, validators voted on blocks each slot (then about 400ms)",
       "First lockout: 2 slots. Doubles on each consecutive vote",
-      "Max lockout: 2^31 slots (~27 years of real time)",
-      "32 confirmations = finalized (rooted) block",
-      "Votes are submitted as on-chain transactions (~5000 lamports each)",
-      "Requires 2/3+ of stake to reach 'confirmed' status",
+      "Max lockout: 2^31 slots (~27 years at Tower's former 400ms slot target)",
+      "Under Tower, 32 confirmations rooted a block",
+      "Under Tower, votes were on-chain transactions (~5000 lamports each)",
+      "Tower used a two-thirds stake threshold for confirmation; current mainnet uses Votor",
       "Slashing for equivocation exists but not fully implemented yet"
     ],
-    whyItMatters: "Tower BFT is why Solana can finalize blocks in ~13 seconds (32 slots). The lockout mechanism means that once 2/3 of stake has voted on a fork, any validator who tries to vote on a competing fork would have to wait out their lockout period — making reversals practically impossible and mathematically extremely expensive.",
+    whyItMatters: "Tower BFT explains Solana's former finality path: 32-slot rooting took about 12.8 seconds. Alpenglow replaced it with Votor, which aggregates validator votes into certificates and targets roughly 150ms finality. Tower's lockout model remains useful for understanding old blocks and the transition to the new protocol.",
     commonMistakes: [
-      "Treating 'confirmed' as final — it's safe for UX but technically reversible",
-      "Not distinguishing processed, confirmed, and finalized commitment in your app logic",
+      "Treating a Tower-era 32-slot root as the current Alpenglow finality rule",
+      "Assuming Tower vote transactions still appear in mainnet blocks",
       "Ignoring vote account health when choosing validators to delegate to"
     ],
     code: `import { Connection, clusterApiUrl, VoteAccountStatus } from "@solana/web3.js";
 const connection = new Connection(clusterApiUrl("mainnet-beta"), "confirmed");
 
 // ── MONITOR VOTE ACCOUNT HEALTH ──────────────────────────────────
-// Vote accounts reveal Tower BFT participation in real-time
+// Vote accounts expose validator participation data; mainnet consensus is Votor.
 
 const voteAccounts = await connection.getVoteAccounts("confirmed");
 
@@ -634,8 +638,9 @@ sorted.slice(0, 5).forEach(v => {
   ].join("\\n"));
 });
 
-// ── UNDERSTAND CONFIRMATION STAGES ──────────────────────────────
-// Check a specific tx through all confirmation stages:
+// ── INSPECT RPC CONFIRMATION STATUS ─────────────────────────────
+// `processed` is provisional; `confirmed` and `finalized` describe the same
+// consensus state on mainnet after Alpenglow.
 
 async function trackConfirmationStages(txSig: string) {
   const statuses = ["processed", "confirmed", "finalized"] as const;
@@ -648,13 +653,13 @@ async function trackConfirmationStages(txSig: string) {
     console.log(\`[\${commitment.toUpperCase()}]\`);
     console.log(\`  Current status: \${cs}\`);
     console.log(\`  Confirmations:  \${confirmations ?? "MAX (finalized)"}\`);
-    // confirmations = null when finalized (rooted, max votes)
+    // confirmations = null when the RPC reports finalized status
   }
 }
 
-// ── WATCH REAL-TIME VOTING ACTIVITY ─────────────────────────────
-// Vote txs dominate Solana's transaction volume (~80-90% of all txs)
-// They are visible as regular transactions to the Vote program:
+// ── HISTORICAL TOWER VOTE TRANSACTIONS ──────────────────────────
+// Tower vote transactions no longer appear in mainnet blocks. This can help
+// inspect historical or archival data:
 
 const voteProgram = "Vote111111111111111111111111111111111111111";
 
@@ -662,7 +667,7 @@ const voteProgram = "Vote111111111111111111111111111111111111111";
 const subId = connection.onLogs(
   new PublicKey(voteProgram),
   (logs) => {
-    // Each log here is a validator casting their Tower BFT vote
+    // Historical Tower vote transaction, if present in the data.
     console.log("Vote cast by:", logs.signature);
   },
   "processed"
@@ -921,18 +926,18 @@ async function buildOptimalTx(
     icon: "Clock",
     tag: "System Design",
     title: "Epochs & Validators",
-    desc: "An epoch is ~432,000 slots (~2.5 days). It's the fundamental unit for staking, validator rewards, and leader schedules. At each epoch boundary: stake activations/deactivations take effect, new leader schedules are computed, inflation rewards are distributed, and vote credits are tallied. Validators must vote on nearly every slot to maximize earnings.",
+    desc: "An epoch is ~432,000 slots (about one day at the 200ms mainnet target). It's the fundamental unit for staking, validator rewards, and leader schedules. At each epoch boundary, stake activations/deactivations take effect, new leader schedules are computed, inflation rewards are distributed, and vote credits are tallied.",
     details: [
-      "~432,000 slots per epoch (~2.5 days on mainnet)",
+      "~432,000 slots per epoch (about 1 day at the 200ms mainnet target)",
       "Leader schedule: deterministic, published each epoch",
-      "Vote tx cost: ~5,000 lamports each × 432k slots = ~2.16 SOL/epoch",
+      "Alpenglow VAT: 0.8 SOL per epoch from the vote account, above its rent-exempt minimum",
       "Validators earn: inflation rewards + tx fees + MEV tips",
       "~8% initial inflation, decreasing 15% per year",
       "Inflation rewards are proportional to stake, not flat",
       "~1,700+ active validators; ~500+ delinquent at any time",
       "Stake activation/deactivation is delayed by 1 epoch boundary"
     ],
-    whyItMatters: "Epochs matter for protocol design when you need time-based mechanics. Staking programs, governance systems, and vesting contracts all use epochs as their time unit. Validator economics also matter for network health — a validator spending 2.16 SOL/epoch in vote costs needs enough stake to earn that back via inflation.",
+    whyItMatters: "Epochs matter for protocol design when you need time-based mechanics. Staking programs, governance systems, and vesting contracts all use epochs as their time unit. Since Alpenglow activated, validators also need enough SOL in the vote account to cover the 0.8 SOL Validator Admission Ticket fee each epoch.",
     commonMistakes: [
       "Using wall-clock time for on-chain time logic instead of slot/epoch",
       "Not accounting for the 1-epoch delay on stake activation/deactivation in protocol design",
@@ -952,7 +957,7 @@ const progress = (epochInfo.slotIndex / epochInfo.slotsInEpoch) * 100;
 console.log(\`Epoch progress:     \${progress.toFixed(2)}%\`);
 
 const slotsRemaining = epochInfo.slotsInEpoch - epochInfo.slotIndex;
-const secsRemaining  = slotsRemaining * 0.4; // ~400ms per slot
+const secsRemaining  = slotsRemaining * 0.2; // ~200ms per mainnet slot target
 const hrsRemaining   = secsRemaining / 3600;
 console.log(\`Time until epoch end: \${hrsRemaining.toFixed(1)} hours\`);
 
@@ -2137,9 +2142,9 @@ async function splitAndSwap(
     icon: "Server",
     tag: "Economics",
     title: "Validator Economics",
-    desc: "Validators earn from three sources: (1) inflation rewards proportional to their stake weight, (2) transaction fees (50% of base + 100% of priority fees), and (3) MEV tips via Jito. Vote costs (~2.16 SOL/epoch) must be covered by earnings. Top validators earn more from MEV tips than from inflation — fundamentally changing the incentive structure.",
+    desc: "Validators earn from inflation rewards, transaction fees, and MEV tips. Since Alpenglow activated, each voting validator also pays a 0.8 SOL Validator Admission Ticket fee per epoch from its vote account, above the rent-exempt minimum. Validator economics influence network participation and stake distribution.",
     details: [
-      "Vote costs: ~5000 lamports × 432k slots = ~2.16 SOL/epoch",
+      "Alpenglow VAT: 0.8 SOL per epoch from the vote account, above rent exemption",
       "Initial inflation: ~8%, decreasing 15% per year",
       "Commission: 0–100% cut of staking rewards (typically 5-10%)",
       "MEV tips: growing — exceeded inflation revenue for top validators in 2024",
@@ -2167,7 +2172,7 @@ async function analyzeValidatorEconomics() {
 
   // Epoch info for timing
   const epochInfo = await connection.getEpochInfo();
-  const slotsPerEpoch = epochInfo.slotsInEpoch; // ~432,000
+  const slotsPerEpoch = epochInfo.slotsInEpoch; // ~432,000; about one day at 200ms/slot
 
   // Per-validator economics
   validators
@@ -2181,15 +2186,15 @@ async function analyzeValidatorEconomics() {
       // Inflation earnings per epoch (simplified):
       const totalSOL      = (await connection.getSupply()).value.total / LAMPORTS_PER_SOL;
       const annualRewards = totalSOL * inflation.validator;
-      const epochRewards  = annualRewards / (365.25 * 24 * 3600 / (slotsPerEpoch * 0.4));
+      const epochRewards  = annualRewards / (365.25 * 24 * 3600 / (slotsPerEpoch * 0.2)); // ~200ms mainnet slot target
       const validatorCut  = epochRewards * stakeShare * commission;
       const stakerCut     = epochRewards * stakeShare * (1 - commission);
 
-      // Vote costs per epoch
-      const voteCostSOL   = (5_000 * slotsPerEpoch) / LAMPORTS_PER_SOL;
+      // Alpenglow Validator Admission Ticket fee per epoch
+      const vatFeeSOL     = 0.8;
 
       // Estimate profitability (very simplified — doesn't include MEV)
-      const netReward     = validatorCut - voteCostSOL;
+      const netReward     = validatorCut - vatFeeSOL;
 
       console.log(\`[\${i+1}] \${v.nodePubkey.slice(0,8)}...\`);
       console.log(\`  Stake:      \${stakeSOL.toLocaleString()} SOL (\${(stakeShare*100).toFixed(2)}%)\`);
@@ -2197,7 +2202,7 @@ async function analyzeValidatorEconomics() {
       console.log(\`  Last vote:  \${v.lastVote} (root: \${v.rootSlot})\`);
       console.log(\`  Vote gap:   \${epochInfo.absoluteSlot - v.lastVote} slots behind\`);
       console.log(\`  Est inflation revenue/epoch: \${validatorCut.toFixed(2)} SOL\`);
-      console.log(\`  Vote costs/epoch:            \${voteCostSOL.toFixed(2)} SOL\`);
+      console.log(\`  VAT fee/epoch:                \${vatFeeSOL.toFixed(2)} SOL\`);
       console.log(\`  Est net (before MEV):        \${netReward.toFixed(2)} SOL\`);
       console.log(\`  Est staker APY:              \${(inflation.validator * (1-commission) * 100).toFixed(2)}%\`);
     });
@@ -2235,54 +2240,56 @@ async function findBestValidators() {
   },
 
   // ─────────────────────────────────────────────────────────────────────────
-  //  FRONTIER — the 2024-2025 breakthroughs reshaping Solana's architecture
+  //  FRONTIER — current and upcoming changes to Solana's architecture
   // ─────────────────────────────────────────────────────────────────────────
   {
     icon: "Zap",
     tag: "Frontier",
     title: "Alpenglow Consensus",
-    desc: "Alpenglow is Solana's proposed consensus/finality redesign. Its first protocol change is Votor: validators vote off-chain and aggregate BLS signatures into certificates, replacing today's Tower BFT-style on-chain vote transaction path. The broader Alpenglow research also describes Rotor for data dissemination, but the active SIMD scopes Rotor separately from the first Votor rollout.",
+    desc: "Alpenglow is Solana's live mainnet consensus protocol. Votor replaced Tower BFT at epoch 1064 on October 21, 2026: validators exchange votes directly and aggregate BLS signatures into certificates instead of putting vote transactions in blocks. Votor targets roughly 150ms finality. Rotor, the planned replacement for Turbine's block propagation, is a later phase and is not yet scheduled.",
     details: [
-      "Votor: validators sign votes and aggregate them into off-chain BLS certificates",
-      "Vote transactions leave the normal transaction hot path, reducing ledger and bandwidth overhead",
-      "One voting round can finalize when enough stake responds quickly",
-      "A second round handles lower online participation while preserving safety",
-      "Rotor is a separate data-dissemination proposal in the broader Alpenglow design",
-      "'20+20' resilience: tolerates 20% Byzantine + 20% offline stake simultaneously",
-      "Targets latency and vote overhead first; throughput depends on clients, scheduling, and block limits",
-      "Activation details remain protocol-version dependent while the SIMD path evolves",
+      "Live on mainnet since epoch 1064, October 21, 2026; shipped in Agave 4.3",
+      "Votor replaces Tower BFT with direct validator votes and aggregate BLS certificates",
+      "Vote transactions are no longer included in blocks",
+      "Votor targets roughly 150ms finality and tolerates 20% adversarial plus 20% offline stake",
+      "Rotor is planned for a later release; it is not live or scheduled and would replace Turbine",
+      "Anza also lists geographically aware leader rotations and Quantumglow as future work, with no committed dates",
+      "Validators need a registered BLS key and 0.8 SOL VAT per epoch; an unpaid fee stops voting and block production the next epoch",
+      "Mainnet slot time is 200ms after a separate rollout; finality time and slot time are different",
+      "Execution is unchanged: SVM programs, transactions, and fees work as before",
+      "On mainnet, `confirmed` and `finalized` describe the same state; `processed` remains provisional",
+      "A slot can contain multiple candidate banks; Geyser tags each event with `bank_id`",
     ],
-    whyItMatters: "The point is not just a faster headline number. Today's finality path is tied to repeated validator votes that are themselves transactions. Moving vote aggregation out of the normal transaction stream can reduce ledger bloat, free blockspace, and make stronger settlement practical for apps that currently rely on optimistic confirmed states. It also forces builders to stop hard-coding today's commitment timing as if it were permanent.",
+    whyItMatters: "Alpenglow has replaced Tower BFT on mainnet, so validator voting no longer adds vote transactions to blocks. The Foundation targets finality in roughly 150ms, down from about 12.8 seconds. For app builders, execution and transaction formats stay the same, but `confirmed` and `finalized` now report the same consensus state. Infrastructure that consumes blocks, Geyser streams, vote data, or timestamps needs to account for the protocol changes.",
     commonMistakes: [
-      "Treating Rotor as part of the first Votor SIMD rollout — the proposal scopes it separately",
-      "Assuming all Alpenglow details are live on mainnet today — follow the active SIMD/feature activation state",
-      "Confusing finality latency with block time and execution throughput",
-      "Believing faster finality means higher TPS — Alpenglow targets latency; throughput comes from Firedancer + block-limit raises",
+      "Assuming Rotor is already live — Votor is live; Rotor is a later, unscheduled phase",
+      "Confusing roughly 150ms finality with the separate 200ms mainnet slot time",
+      "Expecting Alpenglow to change SVM execution, program code, or transaction formats",
+      "Keeping separate confirmed and finalized app states on mainnet as if they had different consensus depth",
+      "Attributing throughput gains to Alpenglow — it changes consensus and finality latency",
     ],
     code: `// Alpenglow is a validator-level protocol change — there is no app SDK call.
-// But your client-side commitment logic is what benefits. Today:
+// Apps can keep using the normal RPC confirmation methods.
 import { Connection } from "@solana/web3.js";
 const conn = new Connection("https://api.mainnet-beta.solana.com");
 
-// Pre-Alpenglow you trade safety for latency by choosing a commitment:
-//   processed  ~0.4s   (can be dropped)
-//   confirmed  ~1-2s   (2/3 stake voted)
-//   finalized  ~13s    (32-deep rooted, irreversible)
+// `processed` is provisional. On mainnet, `confirmed` and `finalized`
+// now describe the same Alpenglow consensus state.
 const sig = "...";
-await conn.confirmTransaction(sig, "finalized"); // slow today
+await conn.confirmTransaction(sig, "finalized");
 
-// Post-Alpenglow, finalized commitment is expected to be much faster because
-// Votor finalizes with aggregated vote certificates instead of on-chain vote
-// transactions accumulating through many slots.
-// Forward-looking apps should already prefer "confirmed" for UX and
-// reserve "finalized" for settlement. Keep the code paths separate so
-// protocol upgrades can improve safety latency without a client rewrite.
+// Votor validators exchange votes directly and aggregate BLS certificates.
+// The Foundation's finality target is roughly 150ms, down from ~12.8s.
+// No transaction execution or app SDK migration is required.
 
-// What changes: vote aggregation moves out of normal transaction execution,
-// reducing vote transaction overhead and ledger growth pressure.`,
+// Validator/indexer integrations should review the Alpenglow breaking changes:
+// bank_id in Geyser, multiple candidate banks per slot, and new Clock timestamps.`,
     links: [
+      { label: "Solana Foundation — Alpenglow status and technical details", url: "https://solana.com/upgrades/alpenglow" },
+      { label: "Solana Foundation — BLS pubkeys and Validator Admission Ticket", url: "https://solana.com/upgrades/bls-pubkey-vat" },
+      { label: "Anza — Alpenglow is live on mainnet", url: "https://www.prnewswire.com/news-releases/alpenglow-is-live-on-solana-the-worlds-fastest-finality-on-a-global-network-302915579.html" },
       { label: "SIMD-0326 — Alpenglow consensus", url: "https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0326-alpenglow.md" },
-      { label: "Anza — Alpenglow overview", url: "https://www.anza.xyz/blog/alpenglow-a-new-consensus-for-solana" },
+      { label: "Anza — original Alpenglow design", url: "https://www.anza.xyz/blog/alpenglow-a-new-consensus-for-solana" },
     ],
   },
   {
@@ -3203,15 +3210,15 @@ export const flowSteps = [
   { step: "02", label: "RPC Node", desc: "Validate & forward", detail: "The RPC node validates the transaction format, optionally runs preflight simulation (executes in a sandbox to detect errors before committing), then forwards it to the current and upcoming leaders via Gulf Stream. The RPC may retry forwarding a few times but doesn't guarantee delivery. This is fire-and-forget — always implement your own confirmation polling." },
   { step: "03", label: "Leader", desc: "Execute in slot", detail: "The current slot's designated leader receives your tx (pre-cached via Gulf Stream), executes it in Sealevel's parallel runtime, and packs it into their block. The leader can order transactions within their block freely — this is where MEV extraction happens. Sealevel runs non-conflicting txs in parallel across CPU threads using the declared account access lists." },
   { step: "04", label: "Turbine", desc: "Block propagated", detail: "The leader doesn't send the full block to every validator (that would require massive bandwidth). Instead, Turbine breaks the block into ~1228-byte erasure-coded shreds and distributes them through a stake-weighted tree. Each tier of validators forwards shreds to a subset of the next tier — like BitTorrent. Forward Error Correction means validators can reconstruct the block even with missing shreds." },
-  { step: "05", label: "Validators", desc: "Vote & confirm", detail: "Validators receive shreds via Turbine, reconstruct the full block, replay all transactions to verify correctness, then submit vote transactions to Tower BFT. 'Confirmed' status is reached when validators representing 2/3+ of total staked SOL have voted on the block. This usually takes 1-2 seconds (2-4 slots). Validators who vote incorrectly or on competing forks face increasing lockout penalties." },
-  { step: "06", label: "Finalized", desc: "2/3 supermajority", detail: "Once a block has accumulated 32 consecutive confirmations (the Tower BFT lockout threshold), it becomes 'rooted' and finalized. At this point, mathematically reversing this block would require a supermajority of validators to sacrifice their entire staked SOL (the lockout means they'd have to wait 2^31 slots to vote on a competing fork). Finalization typically takes 13-26 seconds (32-64 slots) on mainnet." },
+  { step: "05", label: "Votor", desc: "Direct votes + certificates", detail: "Validators receive shreds via Turbine, reconstruct candidate banks, and replay transactions. Votor validators exchange votes directly and aggregate BLS signatures into certificates; vote transactions are no longer included in mainnet blocks." },
+  { step: "06", label: "Finalized", desc: "~150ms target", detail: "Votor finalizes a bank with one or two voting rounds. Solana Foundation's target is roughly 150ms, down from about 12.8 seconds under Tower BFT. On mainnet, `confirmed` and `finalized` describe the same state; `processed` remains provisional." },
 ];
 
 export const stats = [
-  { val: "~400ms", label: "Slot time", sub: "target" },
+  { val: "200ms", label: "Slot time", sub: "mainnet target" },
   { val: "65,000", label: "TPS theoretical", sub: "peak" },
   { val: "1,232",  label: "Bytes max tx",    sub: "limit" },
-  { val: "432k",   label: "Slots per epoch", sub: "~2.5 days" },
+  { val: "432k",   label: "Slots per epoch", sub: "~1 day at 200ms" },
   { val: "~0.00001", label: "SOL avg fee",   sub: "mainnet" },
   { val: "1,700+", label: "Active validators",sub: "mainnet-beta" },
   { val: "~8%",    label: "Staking APY",     sub: "current" },

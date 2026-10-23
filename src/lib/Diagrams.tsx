@@ -89,12 +89,12 @@ const diagrams: Record<string, () => ReactNode> = {
       <Node x={54} y={66} w={532} h={28} t="Signatures[]  ·  one per required signer (64 bytes each)" align="start" />
       <Node x={54} y={100} w={532} h={28} t="Message › header · account keys[] · recent blockhash (nonce + ~150-slot expiry)" align="start" />
       <Node x={54} y={134} w={532} h={40} t="Instructions[]" sub="{ program_id, accounts[], data }  — run in order" accent align="start" />
-      {T(320, 212, "fee payer signs · recent blockhash gives a ~60s expiry window", DIM, 10.5, 500)}
+      {T(320, 212, "fee payer signs · recent blockhash gives a ~30s window at 200ms slots", DIM, 10.5, 500)}
     </Wrap>
   ),
   "blocks-slots": () => (
-    <Wrap vb="0 0 640 220" caption="A slot is a ~400ms window assigned to a leader. If the leader is offline/slow, the slot is skipped — no block.">
-      {title("Slots vs blocks — slot is the clock, block is the data")}
+    <Wrap vb="0 0 640 220" caption="A mainnet slot targets 200ms and is assigned to a leader. Alpenglow slots can contain multiple candidate banks; a skipped slot has no block.">
+      {title("Slots vs blocks — slot is the interval, block is the data")}
       {[0, 1, 2, 3, 4, 5].map((i) => {
         const x = 36 + i * 98;
         const skipped = i === 3;
@@ -106,13 +106,13 @@ const diagrams: Record<string, () => ReactNode> = {
           </g>
         );
       })}
-      {T(320, 158, "~2.5 slots/sec · slot number is Solana's native time reference", MID, 11, 600)}
+      {T(320, 158, "~5 slots/sec target · slot number is a protocol sequence", MID, 11, 600)}
       {T(320, 188, "tx blockhash from slot N is valid until ~slot N+150", DIM, 10.5, 500)}
     </Wrap>
   ),
   "proof-of-history": () => (
-    <Wrap vb="0 0 640 220" caption="PoH is a clock, not consensus: a SHA-256 chain where each hash proves time passed since the last. Transactions are stamped into the sequence.">
-      {title("Proof of History — a verifiable SHA-256 hash chain")}
+    <Wrap vb="0 0 640 220" caption="Tower-era PoH was a SHA-256 chain used to pace ledger entries. Since Alpenglow, PoH no longer paces block production and the Clock timestamp source has changed.">
+      {title("Proof of History — Tower-era clock model")}
       {[0, 1, 2, 3].map((i) => {
         const x = 40 + i * 150;
         return (
@@ -122,7 +122,7 @@ const diagrams: Record<string, () => ReactNode> = {
           </g>
         );
       })}
-      {T(345, 158, "tx stamped between hash 2 → 3", A, 10.5, 700)}
+      {T(345, 158, "Tower-era tx entry between hash 2 → 3", A, 10.5, 700)}
       {arrow(345, 148, 345, 128, A)}
       {T(320, 196, "verifiers replay the chain in parallel — order is provable with zero messaging", DIM, 10.5, 500)}
     </Wrap>
@@ -158,8 +158,8 @@ const diagrams: Record<string, () => ReactNode> = {
 
   // ── CONSENSUS ────────────────────────────────────────────────────────
   "tower-bft": () => (
-    <Wrap vb="0 0 640 232" caption="Each consecutive vote on a fork doubles your lockout (2,4,8…). After 32 confirmations a block is rooted — reverting it would cost the supermajority their stake.">
-      {title("Tower BFT — exponential vote lockouts")}
+    <Wrap vb="0 0 640 232" caption="Historical Tower BFT lockouts doubled with each vote. Alpenglow retired Tower on mainnet in October 2026 and replaced it with Votor.">
+      {title("Tower BFT — retired lockout model")}
       {[1, 2, 3, 4, 5].map((i) => {
         const x = 44 + (i - 1) * 118;
         const lock = Math.pow(2, i);
@@ -170,21 +170,21 @@ const diagrams: Record<string, () => ReactNode> = {
           </g>
         );
       })}
-      {T(320, 160, "32 consecutive votes  →  rooted / finalized (irreversible)", A, 11.5, 700)}
-      {T(320, 192, "switching forks early is cheap; switching late means forfeiting locked stake", DIM, 10.5, 500)}
+      {T(320, 160, "under Tower: 32 consecutive votes → rooted", A, 11.5, 700)}
+      {T(320, 192, "Votor now finalizes with direct votes + BLS certificates", DIM, 10.5, 500)}
     </Wrap>
   ),
   alpenglow: () => (
-    <Wrap vb="0 0 640 244" caption="Alpenglow retires Tower BFT + on-chain vote txs. Votor aggregates BLS vote certificates off-chain; Rotor flattens propagation. Finality drops from ~12.8s to ~100–150ms.">
-      {title("Alpenglow — Votor + Rotor")}
-      <Node x={40} y={50} w={270} h={86} t="VOTOR" sub="off-chain BLS vote certificates" accent />
-      {T(175, 112, "≥80% stake → 1 round ≈ 100ms", MID, 9.5, 600)}
-      {T(175, 126, "60–80% → 2 rounds ≈ 150–250ms", DIM, 9)}
-      <Node x={330} y={50} w={270} h={86} t="ROTOR" sub="single-relay-layer broadcast" accent />
-      {T(465, 112, "supersedes Turbine's multi-hop tree", DIM, 9.5, 500)}
-      <Node x={40} y={154} w={270} h={40} t="no more vote transactions" sub="kills the #1 ledger-bloat source" color={A} align="start" />
-      <Node x={330} y={154} w={270} h={40} t="PoH stays as a clock" sub="just removed from the voting hot path" align="start" />
-      {T(320, 222, "approved by 98.27% of voting stake · rolling out via testnet first", DIM, 10.5, 500)}
+    <Wrap vb="0 0 640 244" caption="Votor is live on mainnet and replaced Tower BFT. Rotor is planned for a later, unscheduled release. Finality targets ~150ms; 200ms slot time is separate.">
+      {title("Alpenglow — Votor live · Rotor planned")}
+      <Node x={40} y={50} w={270} h={86} t="VOTOR · LIVE" sub="direct votes + BLS certificates" accent />
+      {T(175, 112, "≈150ms finality target", MID, 9.5, 600)}
+      {T(175, 126, "Tower retired at slot 459,653,000", DIM, 9)}
+      <Node x={330} y={50} w={270} h={86} t="ROTOR · LATER" sub="planned Turbine replacement" />
+      {T(465, 112, "single relay layer · unscheduled", DIM, 9.5, 500)}
+      <Node x={40} y={154} w={270} h={40} t="no vote transactions" sub="Votor replaced Tower's vote txs" color={A} align="start" />
+      <Node x={330} y={154} w={270} h={40} t="PoH no longer paces blocks" sub="Clock timestamp source changed" align="start" />
+      {T(320, 222, "mainnet: epoch 1064 · confirmed = finalized", DIM, 10.5, 500)}
     </Wrap>
   ),
 
@@ -280,10 +280,10 @@ const diagrams: Record<string, () => ReactNode> = {
 
   // ── DATA FLOW ────────────────────────────────────────────────────────
   "tx-lifecycle": () => (
-    <Wrap vb="0 0 640 188" caption="processed → confirmed (⅔ stake voted) → finalized (32-deep root, irreversible). There's no mempool, so retrying is the client's job.">
+    <Wrap vb="0 0 640 188" caption="Under Alpenglow, processed is provisional and confirmed/finalized describe the same consensus state. Votor finality targets ~150ms. There is no public mempool, so clients still need retry logic.">
       {title("Transaction lifecycle — sign to finality")}
-      <Pipeline items={[{ t: "Client", sub: "sign" }, { t: "RPC", sub: "forward" }, { t: "Leader", sub: "execute" }, { t: "Turbine", sub: "propagate" }, { t: "Vote", sub: "⅔ stake" }, { t: "Final", sub: "rooted" }]} y={70} h={52} hi={5} />
-      {T(320, 162, "confirmed ≈ 1–2s · finalized ≈ 13s today (≈150ms under Alpenglow)", DIM, 10.5, 500)}
+      <Pipeline items={[{ t: "Client", sub: "sign" }, { t: "RPC", sub: "forward" }, { t: "Leader", sub: "execute" }, { t: "Turbine", sub: "propagate" }, { t: "Votor", sub: "BLS cert" }, { t: "Final", sub: "≈150ms" }]} y={70} h={52} hi={5} />
+      {T(320, 162, "Alpenglow target ≈150ms · confirmed and finalized now match", DIM, 10.5, 500)}
     </Wrap>
   ),
   "lookup-tables": () => (

@@ -8,7 +8,7 @@ const CY = 285;
 
 const SPOKES = [
   { label: "Start here", to: "/learn", angle: -90 },
-  { label: "What's new · 2025", to: "/deep-dives/frontier-2025", angle: -45 },
+  { label: "What's new · 2026", to: "/deep-dives/frontier-2025", angle: -45 },
   { label: "Consensus & finality", to: "/deep-dives/consensus-finality", angle: 0 },
   { label: "Programs & the SVM", to: "/deep-dives/runtime-programs", angle: 45 },
   { label: "Validator internals", to: "/deep-dives/execution-hot-path", angle: 90 },

@@ -39,7 +39,7 @@ export default function DeepDives() {
           <h1 className="page-title reveal deep-page-title" style={{ animationDelay: ".05s" }}>Few paths, real depth.</h1>
           <p className="page-subtitle reveal deep-page-subtitle" style={{ animationDelay: ".1s" }}>
             Curated routes through Solana internals — the validator hot path, consensus and finality, the runtime,
-            state, and the 2025 frontier — each read in an order that builds on itself.
+            state, and recent protocol changes — each read in an order that builds on itself.
           </p>
         </div>
 

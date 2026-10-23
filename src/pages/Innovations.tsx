@@ -17,7 +17,7 @@ export default function Innovations() {
           <h1 className="page-title reveal" style={{ animationDelay: ".05s" }}>{innovations.length} protocol systems.</h1>
           <p className="page-subtitle reveal" style={{ animationDelay: ".1s" }}>
             The core mechanisms behind Solana throughput — from the network clock to parallel execution and
-            data propagation — plus the 2025 breakthroughs (Alpenglow, Firedancer, DoubleZero) now reshaping it.
+            data propagation — plus recent protocol and infrastructure changes now reshaping it.
           </p>
         </div>
 
@@ -34,7 +34,8 @@ export default function Innovations() {
                   <p>{inv.impact}</p>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  {inv.frontier && <span style={{ fontSize: 10, fontFamily: "var(--font-mono)", letterSpacing: ".1em", textTransform: "uppercase", color: "var(--neon-green)", border: "1px solid rgba(20,241,149,.3)", borderRadius: 99, padding: "3px 8px" }}>2025</span>}
+                  {inv.statusLabel && <span style={{ fontSize: 10, fontFamily: "var(--font-mono)", letterSpacing: ".1em", textTransform: "uppercase", color: "var(--neon-green)", border: "1px solid rgba(20,241,149,.3)", borderRadius: 99, padding: "3px 8px" }}>{inv.statusLabel}</span>}
+                  {!inv.statusLabel && inv.frontier && <span style={{ fontSize: 10, fontFamily: "var(--font-mono)", letterSpacing: ".1em", textTransform: "uppercase", color: "var(--neon-green)", border: "1px solid rgba(20,241,149,.3)", borderRadius: 99, padding: "3px 8px" }}>2025</span>}
                   {inv.legacy && <span className="doc-muted" style={{ color: "var(--sol-yellow)" }}>legacy</span>}
                   {inv.conceptId && <ArrowRight size={14} style={{ color: "var(--text-dim)" }} />}
                 </div>
@@ -51,7 +52,7 @@ export default function Innovations() {
         <div className="eyebrow" style={{ marginBottom: 8 }}>Interactive</div>
         <h2 className="section-title" style={{ marginBottom: 8 }}>Commitment states</h2>
         <p style={{ fontSize: 16, color: "var(--text-mid)", maxWidth: 560, marginBottom: 26 }}>
-          The common production mistake: treating <span className="mono" style={{ color: "var(--text)" }}>processed</span> like final settlement.
+          Alpenglow is live: <span className="mono" style={{ color: "var(--text)" }}>processed</span> stays provisional, while <span className="mono" style={{ color: "var(--text)" }}>confirmed</span> and <span className="mono" style={{ color: "var(--text)" }}>finalized</span> describe the same mainnet state.
         </p>
 
         <div className="card" style={{ padding: 0, overflow: "hidden", marginBottom: 40 }}>
@@ -59,7 +60,7 @@ export default function Innovations() {
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <span style={{ width: 10, height: 10, borderRadius: 99, background: cur.color }} />
               <span style={{ fontSize: 22, fontWeight: 800, letterSpacing: 0 }}>{cur.label}</span>
-              {cur.key === "finalized" && <span className="mono" style={{ fontSize: 11, padding: "3px 9px", borderRadius: 99, border: `1px solid ${cur.color}`, color: cur.color }}>◆ rooted</span>}
+              {cur.key === "finalized" && <span className="mono" style={{ fontSize: 11, padding: "3px 9px", borderRadius: 99, border: `1px solid ${cur.color}`, color: cur.color }}>◆ same state as confirmed</span>}
             </div>
             <p style={{ fontSize: 14.5, color: "var(--text-mid)", marginTop: 12, lineHeight: 1.6 }}>{cur.definition}</p>
             <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginTop: 12, fontSize: 13.5, color: cur.color }}>

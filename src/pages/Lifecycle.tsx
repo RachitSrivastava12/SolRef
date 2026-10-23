@@ -16,7 +16,7 @@ export default function Lifecycle() {
           <div className="eyebrow reveal">Data flow</div>
           <h1 className="page-title reveal" style={{ animationDelay: ".05s" }}>Transaction lifecycle.</h1>
           <p className="page-subtitle reveal" style={{ animationDelay: ".1s" }}>
-            From local signature to rooted block: six stages, each with the trigger that advances it.
+            From local signature to Alpenglow finality: six stages, each with the trigger that advances it.
           </p>
         </div>
 
