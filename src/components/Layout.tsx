@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useMemo, type CSSProperties, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Search, Command, Menu, X, ArrowRight, ExternalLink, Globe } from "lucide-react";
+import { Search, Command, Menu, X, ArrowRight, ExternalLink, Globe, BookOpen, FileText } from "lucide-react";
 import { Wordmark, SolanaMark } from "./Brand";
-import { concepts, metaFor, levelMeta, iconFor } from "../lib/concepts";
-import { searchConcepts, type SearchEntry } from "../lib/searchIndex";
+import { concepts, levelMeta, iconFor } from "../lib/concepts";
+import { searchSite, type SiteSearchResult } from "../lib/searchIndex";
 
 const NAV = [
   { to: "/innovations", label: "Innovations" },
@@ -14,7 +14,9 @@ const NAV = [
   { to: "/resources", label: "Resources" },
 ];
 
-type Hit = { kind: "concept"; e: SearchEntry } | { kind: "web"; url: string; label: string };
+type Hit =
+  | { kind: "page"; entry: SiteSearchResult }
+  | { kind: "action"; id: string; title: string; subtitle: string; url: string; icon: "docs" | "web" | "request" };
 
 function CommandSearch({ onClose }: { onClose: () => void }) {
   const [q, setQ] = useState("");
@@ -25,70 +27,111 @@ function CommandSearch({ onClose }: { onClose: () => void }) {
 
   const results = useMemo<Hit[]>(() => {
     const t = q.trim();
-    const entries = searchConcepts(t, t ? 8 : 7);
-    const hits: Hit[] = entries.map((e) => ({ kind: "concept", e }));
-    if (t) hits.push({ kind: "web", url: `https://www.google.com/search?q=${encodeURIComponent(`${t} solana`)}`, label: t });
-    return hits;
+    const entries = searchSite(t, t ? 8 : 7);
+    const hits: Hit[] = entries.map((entry) => ({ kind: "page", entry }));
+    if (!t) return hits;
+
+    const topic = t.slice(0, 160);
+    const actions: Hit[] = [
+      {
+        kind: "action",
+        id: "official-docs-search",
+        title: `Search Solana docs for “${topic}”`,
+        subtitle: "Search the official documentation",
+        url: `https://www.google.com/search?q=${encodeURIComponent(`site:solana.com/docs ${topic}`)}`,
+        icon: "docs",
+      },
+      {
+        kind: "action",
+        id: "web-search",
+        title: `Search the web for “${topic}”`,
+        subtitle: "Search broader Solana resources",
+        url: `https://www.google.com/search?q=${encodeURIComponent(`${topic} Solana`)}`,
+        icon: "web",
+      },
+      {
+        kind: "action",
+        id: "request-reference",
+        title: `Request “${topic}” as a SolRef reference`,
+        subtitle: "Suggest a topic for a sourced, reviewed reference page",
+        url: `https://github.com/RachitSrivastava12/SolRef/issues/new?template=reference-request.yml&title=${encodeURIComponent(`[Reference request] ${topic}`)}`,
+        icon: "request",
+      },
+    ];
+    return entries.length ? [...hits, ...actions] : [actions[2], actions[0], actions[1]];
   }, [q]);
   useEffect(() => { setActive(0); }, [q]);
 
   const pick = (i: number) => {
     const r = results[i]; if (!r) return;
-    if (r.kind === "web") { window.open(r.url, "_blank", "noopener,noreferrer"); onClose(); return; }
-    navigate(`/docs/${r.e.id}`); onClose();
+    if (r.kind === "action") { window.open(r.url, "_blank", "noopener,noreferrer"); onClose(); return; }
+    navigate(r.entry.route); onClose();
   };
   const onKey = (e: React.KeyboardEvent) => {
-    if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => Math.min(a + 1, results.length - 1)); }
+    if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => Math.min(a + 1, Math.max(results.length - 1, 0))); }
     else if (e.key === "ArrowUp") { e.preventDefault(); setActive((a) => Math.max(a - 1, 0)); }
     else if (e.key === "Enter") pick(active);
   };
 
-  const conceptCount = results.filter((r) => r.kind === "concept").length;
+  const pageCount = results.filter((r) => r.kind === "page").length;
 
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 80, display: "flex", justifyContent: "center", alignItems: "flex-start", padding: "12vh 18px 0", background: "rgba(0,0,0,.72)", backdropFilter: "blur(10px)", animation: "fadeIn .12s" }}>
-      <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 640, overflow: "hidden", animation: "scaleIn .14s", boxShadow: "0 24px 90px rgba(0,0,0,.46)" }}>
+    <div role="presentation" onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 80, display: "flex", justifyContent: "center", alignItems: "flex-start", padding: "12vh 18px 0", background: "rgba(0,0,0,.72)", backdropFilter: "blur(10px)", animation: "fadeIn .12s" }}>
+      <div role="dialog" aria-modal="true" aria-label="Search SolRef" onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 640, overflow: "hidden", animation: "scaleIn .14s", boxShadow: "0 24px 90px rgba(0,0,0,.46)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderBottom: "1px solid var(--line)", background: "var(--bg)" }}>
           <Search size={17} style={{ color: "var(--text-dim)" }} />
           <input ref={inputRef} value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onKey}
-            placeholder={`Search anything Solana — "how do fees work", PDAs, frontrunning, rent…`}
+            role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="solref-search-results"
+            aria-activedescendant={results[active] ? `search-result-${active}` : undefined}
+            aria-label="Search references, tracks, architecture, and labs"
+            placeholder="Search SolRef — ‘how do fees work’, PDAs, frontrunning…"
             style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "var(--text)", fontSize: 15, fontFamily: "var(--font-display)" }} />
           <kbd>ESC</kbd>
         </div>
         <div style={{ maxHeight: 440, overflowY: "auto", padding: 8 }}>
-          {q.trim() && conceptCount === 0 && (
-            <div style={{ padding: "14px 12px 6px", color: "var(--text-dim)", fontSize: 12.5, fontFamily: "var(--font-mono)" }}>
-              No concept page for that yet — search the open web instead:
+          {!q.trim() && (
+            <div style={{ padding: "12px 12px 6px", color: "var(--text-dim)", fontSize: 12.5 }}>
+              Search reference pages, learning tracks, architecture, and interactive guides.
             </div>
           )}
+          {q.trim() && pageCount === 0 && (
+            <div aria-live="polite" style={{ padding: "12px 12px 8px", color: "var(--text-dim)", fontSize: 12.5, lineHeight: 1.55 }}>
+              <strong style={{ display: "block", color: "var(--text)", fontWeight: 650 }}>No SolRef page matches yet.</strong>
+              Request the topic and it can be added as a sourced reference after review, or search Solana’s official docs below.
+            </div>
+          )}
+          <div id="solref-search-results" role="listbox" aria-label="Search results">
           {results.map((r, i) => {
-            if (r.kind === "web") {
+            if (r.kind === "action") {
+              const Icon = r.icon === "request" ? BookOpen : r.icon === "docs" ? FileText : Globe;
+              const selectedStyle = i === active ? "var(--surface-2)" : "transparent";
               return (
-                <button key="web" onMouseEnter={() => setActive(i)} onClick={() => pick(i)}
-                  style={{ width: "100%", minHeight: 54, display: "flex", alignItems: "center", gap: 13, padding: "10px 12px", borderRadius: 8, border: "1px solid transparent", textAlign: "left", background: i === active ? "var(--surface-2)" : "transparent", color: "var(--text)", transition: "background .12s var(--ease-out)", marginTop: conceptCount > 0 ? 6 : 0, borderTop: conceptCount > 0 ? "1px solid var(--line)" : "none" }}>
-                  <span style={{ width: 30, height: 30, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--neon-green)", background: "var(--surface-3)", flexShrink: 0 }}><Globe size={16} /></span>
+                <button key={r.id} id={`search-result-${i}`} role="option" aria-selected={i === active} onMouseEnter={() => setActive(i)} onClick={() => pick(i)}
+                  style={{ width: "100%", minHeight: 54, display: "flex", alignItems: "center", gap: 13, padding: "10px 12px", borderRadius: 8, border: "1px solid transparent", textAlign: "left", background: selectedStyle, color: "var(--text)", transition: "background .12s var(--ease-out)", marginTop: pageCount > 0 && i === pageCount ? 6 : 0, borderTop: pageCount > 0 && i === pageCount ? "1px solid var(--line)" : "none" }}>
+                  <span style={{ width: 30, height: 30, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--neon-green)", background: "var(--surface-3)", flexShrink: 0 }}><Icon size={16} /></span>
                   <span style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ display: "block", fontSize: 14, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Search the web for “{r.label}”</span>
-                    <span style={{ display: "block", fontSize: 12, color: "var(--text-dim)" }}>Opens Google, scoped to Solana</span>
+                    <span style={{ display: "block", fontSize: 14, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.title}</span>
+                    <span style={{ display: "block", fontSize: 12, color: "var(--text-dim)" }}>{r.subtitle}</span>
                   </span>
                   <ExternalLink size={15} style={{ color: i === active ? "var(--neon-green)" : "var(--text-dim)", flexShrink: 0 }} />
                 </button>
               );
             }
-            const c = r.e.c;
-            const m = metaFor(c.title);
+            const entry = r.entry;
             return (
-              <button key={r.e.id} onMouseEnter={() => setActive(i)} onClick={() => pick(i)}
-                style={{ width: "100%", minHeight: 54, display: "flex", alignItems: "center", gap: 13, padding: "10px 12px", borderRadius: 8, border: "1px solid transparent", textAlign: "left", background: i === active ? "var(--surface-2)" : "transparent", color: "var(--text)", transition: "background .12s var(--ease-out), border-color .12s var(--ease-out)" }}>
-                <span style={{ width: 30, height: 30, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text)", background: "var(--surface-3)", flexShrink: 0 }}>{iconFor(c.icon)}</span>
+              <button key={entry.id} id={`search-result-${i}`} role="option" aria-selected={i === active} onMouseEnter={() => setActive(i)} onClick={() => pick(i)}
+                style={{ width: "100%", minHeight: 58, display: "flex", alignItems: "center", gap: 13, padding: "10px 12px", borderRadius: 8, border: "1px solid transparent", textAlign: "left", background: i === active ? "var(--surface-2)" : "transparent", color: "var(--text)", transition: "background .12s var(--ease-out)" }}>
+                <span style={{ width: 30, height: 30, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text)", background: "var(--surface-3)", flexShrink: 0 }}>{iconFor(entry.icon)}</span>
                 <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: "block", fontSize: 14, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.title}</span>
-                  <span style={{ display: "block", fontSize: 12, color: "var(--text-dim)" }}>{c.tag} · {levelMeta[m.level].label}</span>
+                  <span style={{ display: "block", fontSize: 14, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{entry.title}</span>
+                  <span style={{ display: "block", fontSize: 12, color: "var(--text-dim)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{entry.category}{entry.level ? ` · ${levelMeta[entry.level as keyof typeof levelMeta]?.label ?? entry.level}` : ""}</span>
+                  <span style={{ display: "block", marginTop: 3, fontSize: 11.5, color: "var(--text-dim)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.description}</span>
                 </span>
                 <ArrowRight size={15} style={{ color: i === active ? "var(--neon-green)" : "var(--text-dim)", flexShrink: 0 }} />
               </button>
             );
           })}
+          </div>
         </div>
       </div>
     </div>

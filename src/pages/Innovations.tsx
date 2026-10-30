@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import Layout from "../components/Layout";
 import { iconFor } from "../lib/concepts";
@@ -7,7 +7,14 @@ import { innovations, txStates } from "../lib/innovations";
 
 export default function Innovations() {
   const [state, setState] = useState(0);
+  const location = useLocation();
   const cur = txStates[state];
+
+  useEffect(() => {
+    const targetId = location.hash.slice(1);
+    if (!targetId) return;
+    requestAnimationFrame(() => document.getElementById(targetId)?.scrollIntoView({ block: "center" }));
+  }, [location.hash]);
 
   return (
     <Layout>
@@ -23,6 +30,7 @@ export default function Innovations() {
 
         <div className="doc-list" style={{ marginBottom: 64 }}>
           {innovations.map((inv) => {
+            const anchorId = `innovation-${inv.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
             const body = (
               <>
                 <span className="doc-row__icon">{iconFor(inv.icon)}</span>
@@ -42,9 +50,9 @@ export default function Innovations() {
               </>
             );
             return inv.conceptId ? (
-              <Link key={inv.name} to={`/docs/${inv.conceptId}`} className="doc-row">{body}</Link>
+              <Link key={inv.name} id={anchorId} to={`/docs/${inv.conceptId}`} className="doc-row">{body}</Link>
             ) : (
-              <div key={inv.name} className="doc-row">{body}</div>
+              <div key={inv.name} id={anchorId} className="doc-row" style={{ scrollMarginTop: "calc(var(--nav-h) + 20px)" }}>{body}</div>
             );
           })}
         </div>

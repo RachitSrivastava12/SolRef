@@ -1,0 +1,36 @@
+name: Request a reference topic
+description: Suggest a missing Solana topic for the open, source-backed reference library.
+title: "[Reference request] "
+labels:
+  - content-feedback
+body:
+  - type: input
+    id: topic
+    attributes:
+      label: Topic
+      description: What Solana concept or mechanism should SolRef cover?
+      placeholder: Transaction versioning, validator snapshots, token extensions...
+    validations:
+      required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: What are you trying to understand?
+      description: A concrete question or task helps us scope a useful reference page.
+      placeholder: I want to understand when to use this and what can go wrong.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should the page explain?
+      description: Add the details, examples, or diagrams that would help you.
+    validations:
+      required: false
+  - type: textarea
+    id: sources
+    attributes:
+      label: Sources or links, if you have them
+      description: Official documentation, specifications, implementation code, or other references.
+    validations:
+      required: false

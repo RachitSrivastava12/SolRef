@@ -1,109 +1,62 @@
+import { parse as parseYaml } from "yaml";
 import { conceptById, metaFor } from "./concepts";
 
 export interface Chapter {
   id: string;
+  sequence: number;
+  phase: number;
+  prerequisites: string[];
   title: string;
   domain: string;
   summary: string;
   outcome: string;
   conceptIds: string[];
   checkpoints: string[];
-  sourceNotes?: string[];
+  sourceNotes: string[];
+  reviewStatus: "pending-expert-review" | "expert-reviewed";
+  lastReviewed: string | null;
+  expertReviewer: string | null;
+  temporalStatus: "unclassified" | "current" | "historical" | "proposed" | "mixed";
+  aiAssisted: "unknown" | "yes" | "no";
+  provenance: string;
+  license: "GPL-3.0-only";
 }
 
-export const chapters: Chapter[] = [
-  {
-    id: "execution-hot-path",
-    title: "Execution Hot Path",
-    domain: "TPU -> Banking -> SVM -> AccountsDB",
-    summary: "Follow one transaction from sender ingress through scheduling, execution, account writes, and block propagation.",
-    outcome: "You can explain why a transaction lands, drops, serializes on a hot account, or becomes visible through RPC.",
-    conceptIds: ["transactions", "quic-swqos", "gulf-stream", "tx-lifecycle", "banking-stage", "svm-bytecode", "accountsdb", "turbine"],
-    checkpoints: ["Where packets enter the leader", "How conflicts are scheduled", "Where state is mutated", "Why confirmation is separate from send"],
-    sourceNotes: [
-      "Engineering Solana frames this as the validator hot path: one transaction's journey from QUIC ingress to committed state.",
-      "The deepest learning value is the handoff between TPU, Banking Stage, SVM, Bank, and AccountsDB.",
-    ],
-  },
-  {
-    id: "consensus-finality",
-    title: "Consensus & Finality",
-    domain: "PoH, Tower BFT, voting, Alpenglow",
-    summary: "Trace PoH's former role, Tower's lockouts, Votor certificates, current commitment levels, and the Alpenglow migration.",
-    outcome: "You can distinguish the retired Tower model from live Votor consensus and explain what changed for apps and infrastructure.",
-    conceptIds: ["blocks-slots", "proof-of-history", "tower-bft", "epochs-validators", "alpenglow"],
-    checkpoints: ["Slot vs block", "PoH in the Tower era", "Tower lockouts", "Votor certificates", "Current commitment semantics"],
-    sourceNotes: [
-      "Under Tower, PoH supplied the ledger-encoded clock used for vote lockouts; PoH no longer paces block production under Alpenglow.",
-      "Votor replaced Tower on mainnet in epoch 1064; Rotor remains planned for a later, unscheduled phase.",
-    ],
-  },
-  {
-    id: "runtime-programs",
-    title: "Runtime & Program Side",
-    domain: "Accounts, Sealevel, SBF, CPI, PDAs",
-    summary: "Understand the account model and why Solana programs are passed every piece of state they touch.",
-    outcome: "You can design programs that cooperate with Sealevel instead of fighting write locks and account limits.",
-    conceptIds: ["accounts-model", "sealevel", "svm-bytecode", "memory-allocator", "instructions-cpis", "pda", "signatures", "compute-units", "rent", "lookup-tables", "token-extensions"],
-    checkpoints: ["Executable vs data accounts", "Read/write declarations", "Heap & stack limits", "CPI call depth", "PDA signing", "Signature verification"],
-    sourceNotes: [
-      "The key distinction is SVM as the execution environment and Sealevel as the parallel execution strategy around declared account access.",
-      "Program design is performance design because writable account choices determine scheduler parallelism.",
-    ],
-  },
-  {
-    id: "network-propagation",
-    title: "Networking & Propagation",
-    domain: "QUIC, SWQoS, Gossip, Turbine, Repair",
-    summary: "Map how transactions, metadata, shreds, and missing data move across validators under load.",
-    outcome: "You can identify whether a problem is sender ingress, leader forwarding, block propagation, or repair.",
-    conceptIds: ["quic-swqos", "gulf-stream", "gossip-repair", "turbine", "doublezero"],
-    checkpoints: ["Stake-weighted lanes", "No public mempool", "CRDS gossip", "Shreds and repair", "Private validator pipes"],
-    sourceNotes: [
-      "QUIC, SWQoS, tpu_vote, and tpu_forwards are separate concerns inside the validator ingress story.",
-      "No global mempool does not mean no queues; the TPU still uses bounded in-memory queues between stages.",
-    ],
-  },
-  {
-    id: "state-data",
-    title: "State, Data & Observability",
-    domain: "AccountsDB, ledger, snapshots, Geyser",
-    summary: "Distinguish live state, historical ledger data, snapshots, streaming, and compressed state.",
-    outcome: "You can choose the correct read path: direct RPC, archival RPC, Geyser stream, DAS, or indexer.",
-    conceptIds: ["accountsdb", "geyser", "state-compression", "rpc-infra", "clusters"],
-    checkpoints: ["Current state vs history", "Snapshot bootstrapping", "Streaming writes", "DAS reads", "RPC limits"],
-    sourceNotes: [
-      "AccountsDB is the live state engine, not an archive of every historical interaction.",
-      "Append-only account files plus a sharded index are the center of the performance story.",
-    ],
-  },
-  {
-    id: "fees-mev-roadmap",
-    title: "Fees, MEV & Roadmap",
-    domain: "Scheduler economics, Jito, Firedancer, APE",
-    summary: "Connect inclusion economics with validator clients and the performance upgrades that change the ceiling.",
-    outcome: "You can reason about priority fees, local fee markets, MEV ordering, and why client performance gates block limit raises.",
-    conceptIds: ["priority-fees", "local-fee-markets", "mev", "jito", "sandwich", "firedancer", "async-execution", "validator-economics"],
-    checkpoints: ["CU price vs CU limit", "Hot-account local fees", "Bundle auctions", "Client diversity", "Async execution"],
-    sourceNotes: [
-      "Performance work only matters when it preserves deterministic execution and validator replay safety.",
-      "Firedancer/Frankendancer should be read as validator-client architecture and resilience, not an app-facing feature.",
-    ],
-  },
-  {
-    id: "frontier-2025",
-    title: "Frontier · 2025–26",
-    domain: "Alpenglow, Firedancer, DoubleZero, async execution",
-    summary: "Recent protocol and infrastructure work: live Alpenglow consensus, validator client diversity, a dedicated network layer, and asynchronous execution research.",
-    outcome: "You can explain what Alpenglow, Firedancer, and DoubleZero change, and how finality, client diversity, and propagation affect different parts of the network.",
-    conceptIds: ["alpenglow", "firedancer", "doublezero", "async-execution"],
-    checkpoints: ["Votor vs Tower voting", "Why client diversity matters", "Dedicated fiber vs the public internet", "Ordering decoupled from execution"],
-    sourceNotes: [
-      "These are independent levers: Alpenglow is latency, Firedancer is resilience + throughput headroom, DoubleZero is propagation, async execution is the scaling re-architecture.",
-      "Alpenglow replaced Tower BFT's voting and finality path; it did not replace the SVM runtime.",
-    ],
-  },
+export interface LearningPhase {
+  id: number;
+  title: string;
+  summary: string;
+}
+
+export const learningPhases: LearningPhase[] = [
+  { id: 1, title: "Start with the basics", summary: "Learn the objects and vocabulary every Solana topic builds on." },
+  { id: 2, title: "Understand execution", summary: "See how programs use state and how a validator processes a transaction." },
+  { id: 3, title: "Follow the data", summary: "Trace ingress, block propagation, stored state, and observation." },
+  { id: 4, title: "Reason about finality and cost", summary: "Connect consensus guarantees with fees, ordering, and MEV." },
+  { id: 5, title: "Finish at the protocol frontier", summary: "Use the complete model to understand current validator and protocol changes." },
 ];
+
+const trackFiles = import.meta.glob<string>("../../content/tracks/*.md", {
+  eager: true,
+  query: "?raw",
+  import: "default",
+});
+
+function chapterFromMarkdown(markdown: string, filename: string): Chapter {
+  const match = markdown.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
+  if (!match) throw new Error(`Missing YAML frontmatter in ${filename}`);
+  const metadata = parseYaml(match[1]) as Omit<Chapter, "summary">;
+  const summary = match[2].match(/^## Summary\s*\n+([\s\S]*?)(?=\n## |$)/m)?.[1]?.trim() ?? "";
+  const chapter: Chapter = { ...metadata, summary };
+  if (!chapter.id || !chapter.title || !chapter.summary || !chapter.outcome || !chapter.conceptIds.length) {
+    throw new Error(`Incomplete learning track in ${filename}`);
+  }
+  return chapter;
+}
+
+export const chapters: Chapter[] = Object.entries(trackFiles)
+  .map(([filename, content]) => chapterFromMarkdown(content, filename))
+  .sort((a, b) => a.sequence - b.sequence);
 
 export const hotPathStages = [
   { label: "QUIC", detail: "stake-weighted ingress", conceptId: "quic-swqos" },

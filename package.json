@@ -10,7 +10,10 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "check:reference-content": "node scripts/check-reference-content.mjs",
+    "check:reference-examples": "node scripts/check-reference-content.mjs --examples",
+    "check:reference-links": "node scripts/check-reference-content.mjs --links"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -64,7 +67,8 @@
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.9",
-    "zod": "^3.25.76"
+    "zod": "^3.25.76",
+    "yaml": "^2.6.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",

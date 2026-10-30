@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 
 const STAGE_W = 1100;
@@ -7,14 +7,14 @@ const CX = STAGE_W / 2;
 const CY = 285;
 
 const SPOKES = [
-  { label: "Start here", to: "/learn", angle: -90 },
-  { label: "What's new · 2026", to: "/deep-dives/frontier-2025", angle: -45 },
-  { label: "Consensus & finality", to: "/deep-dives/consensus-finality", angle: 0 },
-  { label: "Programs & the SVM", to: "/deep-dives/runtime-programs", angle: 45 },
-  { label: "Validator internals", to: "/deep-dives/execution-hot-path", angle: 90 },
-  { label: "Networking", to: "/deep-dives/network-propagation", angle: 135 },
-  { label: "State & data", to: "/deep-dives/state-data", angle: 180 },
-  { label: "Fees, MEV & roadmap", to: "/deep-dives/fees-mev-roadmap", angle: 225 },
+  { label: "01 Start · Foundations", to: "/deep-dives/core-foundations", angle: -90 },
+  { label: "02 Runtime", to: "/deep-dives/runtime-programs", angle: -45 },
+  { label: "03 Execution", to: "/deep-dives/execution-hot-path", angle: 0 },
+  { label: "04 Networking", to: "/deep-dives/network-propagation", angle: 45 },
+  { label: "05 State & data", to: "/deep-dives/state-data", angle: 90 },
+  { label: "06 Consensus", to: "/deep-dives/consensus-finality", angle: 135 },
+  { label: "07 Fees & MEV", to: "/deep-dives/fees-mev-roadmap", angle: 180 },
+  { label: "08 Finish · Frontier", to: "/deep-dives/frontier-2025", angle: 225 },
 ];
 
 export default function RaysHero() {
@@ -96,6 +96,19 @@ export default function RaysHero() {
         </span>{" "}
         Works Internally
       </div>
+
+      <nav className="rays-route-list" aria-label="SolRef learning route, in order">
+        <ol>
+          {SPOKES.map((spoke) => (
+            <li key={spoke.to}>
+              <Link to={spoke.to}>
+                <span className="rays-route-list__number">{spoke.label.slice(0, 2)}</span>
+                <span>{spoke.label.slice(3)}</span>
+              </Link>
+            </li>
+          ))}
+        </ol>
+      </nav>
 
       <div
         className="rays-stage"
@@ -183,9 +196,9 @@ export default function RaysHero() {
                 borderRadius: 99,
                 whiteSpace: "nowrap",
                 fontWeight: 650,
-                background: active ? "var(--text)" : "rgba(255,255,255,.045)",
-                color: active ? "var(--bg)" : "var(--text-mid)",
-                border: `1px solid ${active ? "var(--text)" : "var(--line)"}`,
+                background: active ? "var(--text)" : i === 0 ? "rgba(20,241,149,.11)" : "rgba(255,255,255,.045)",
+                color: active ? "var(--bg)" : i === 0 ? "var(--neon-green)" : "var(--text-mid)",
+                border: `1px solid ${active ? "var(--text)" : i === 0 ? "rgba(20,241,149,.36)" : "var(--line)"}`,
                 transition:
                   "background .18s var(--ease-out), border-color .18s var(--ease-out), color .18s var(--ease-out), transform .18s var(--ease-out)",
                 cursor: "pointer",
@@ -253,6 +266,53 @@ export default function RaysHero() {
           transform-origin: top center;
         }
 
+        .rays-route-list {
+          display: none;
+          position: relative;
+          z-index: 2;
+          width: min(520px, calc(100vw - 40px));
+          margin-top: 16px;
+        }
+
+        .rays-route-list ol {
+          display: grid;
+          gap: 8px;
+          margin: 0;
+          padding: 0;
+          list-style: none;
+        }
+
+        .rays-route-list a {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          min-height: 44px;
+          padding: 8px 12px;
+          border: 1px solid var(--line);
+          border-radius: 9px;
+          background: var(--surface);
+          color: var(--text-mid);
+          font-family: var(--font-mono);
+          font-size: 12px;
+          text-decoration: none;
+        }
+
+        .rays-route-list a:hover {
+          border-color: var(--line-3);
+          background: var(--surface-2);
+          color: var(--text);
+        }
+
+        .rays-route-list a:focus-visible {
+          outline: 2px solid var(--neon-green);
+          outline-offset: 3px;
+        }
+
+        .rays-route-list__number {
+          color: var(--neon-green);
+          font-weight: 700;
+        }
+
         @media (max-width: 1180px) {
           .rays-stage {
             transform: scale(.86);
@@ -266,8 +326,11 @@ export default function RaysHero() {
           }
 
           .rays-stage {
-            transform: scale(.72);
-            height: 396px !important;
+            display: none;
+          }
+
+          .rays-route-list {
+            display: block;
           }
         }
 

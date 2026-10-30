@@ -1,0 +1,39 @@
+name: Reference content maintenance
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "content/**"
+      - "scripts/check-reference-content.mjs"
+      - ".github/workflows/reference-content.yml"
+      - "package.json"
+      - "package-lock.json"
+  schedule:
+    - cron: "0 10 1 1,4,7,10 *"
+
+jobs:
+  metadata-and-examples:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check:reference-content
+      - run: npm run check:reference-examples
+      - run: npm run build
+
+  source-links:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check:reference-links

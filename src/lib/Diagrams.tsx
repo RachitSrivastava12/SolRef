@@ -2,7 +2,7 @@
 // Pure-black, neutral nodes, a single green accent, mono labels. Each renders
 // inside the concept article above the lede. Add a key here = the page shows it.
 
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 
 const A = "var(--neon-green)";
 const FG = "var(--text)";
@@ -39,21 +39,103 @@ function Wrap({ vb = "0 0 640 250", caption, children }: { vb?: string; caption?
 }
 
 type Align = "middle" | "start" | "end";
-const T = (x: number, y: number, s: string, fill = FG, size = 11.5, weight = 600, anchor: Align = "middle") => (
-  <text x={x} y={y} fill={fill} fontSize={size} fontWeight={weight} textAnchor={anchor} style={{ letterSpacing: 0 }}>{s}</text>
-);
+const T = (x: number, y: number, s: string, fill = FG, size = 11.5, weight = 600, anchor: Align = "middle") => {
+  const width = anchor === "middle"
+    ? Math.max(1, 2 * Math.min(x - 12, 628 - x))
+    : anchor === "start" ? Math.max(1, 628 - x) : Math.max(1, x - 12);
+  const lines = wrapSvgText(s, Math.max(1, Math.floor(width / (size * 0.62))));
+  const lineHeight = size * 1.2;
+  const firstY = y - ((lines.length - 1) * lineHeight) / 2;
+  return (
+    <text x={x} y={firstY} fill={fill} fontSize={size} fontWeight={weight} textAnchor={anchor} style={{ letterSpacing: 0 }}>
+      {lines.map((line, i) => <tspan key={i} x={x} y={firstY + i * lineHeight}>{line}</tspan>)}
+    </text>
+  );
+};
 const title = (s: string, x = 320) => T(x, 20, s, MID, 11.5, 600);
+
+function wrapSvgText(value: string, maxChars: number): string[] {
+  const words = value.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let line = "";
+
+  for (const word of words) {
+    if (word.length > maxChars) {
+      if (line) lines.push(line);
+      line = "";
+      for (let i = 0; i < word.length; i += maxChars) {
+        const chunk = word.slice(i, i + maxChars);
+        if (i + maxChars < word.length) lines.push(chunk);
+        else line = chunk;
+      }
+      continue;
+    }
+
+    const next = line ? `${line} ${word}` : word;
+    if (next.length > maxChars && line) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = next;
+    }
+  }
+
+  if (line) lines.push(line);
+  return lines.length ? lines : [""];
+}
 
 function Node({ x, y, w, h, t, sub, accent, color, fill, align = "middle" }:
   { x: number; y: number; w: number; h: number; t: string; sub?: string; accent?: boolean; color?: string; fill?: string; align?: Align }) {
+  const rawId = useId();
+  const clipId = `diagram-node-${rawId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const stroke = color ?? (accent ? A : LINE);
   const tcol = color ?? (accent ? A : FG);
   const tx = align === "start" ? x + 13 : align === "end" ? x + w - 13 : x + w / 2;
+  let titleSize = 11.5;
+  let subSize = 9.5;
+  let titleLines: string[] = [];
+  let subLines: string[] = [];
+  let titleLineHeight = titleSize * 1.18;
+  let subLineHeight = subSize * 1.2;
+
+  // SVG text has no automatic line wrapping. Fit each label to the node's
+  // actual width and height so long labels stay readable on narrow screens.
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    titleLines = wrapSvgText(t, Math.max(3, Math.floor((w - 26) / (titleSize * 0.62))));
+    subLines = sub ? wrapSvgText(sub, Math.max(4, Math.floor((w - 26) / (subSize * 0.62)))) : [];
+    titleLineHeight = titleSize * 1.18;
+    subLineHeight = subSize * 1.2;
+    const textHeight = titleLines.length * titleLineHeight + (sub ? 3 + subLines.length * subLineHeight : 0);
+    const availableHeight = h - 8;
+    if (textHeight <= availableHeight) break;
+    const scale = Math.max(0.78, availableHeight / textHeight);
+    titleSize = Math.max(8, titleSize * scale);
+    subSize = Math.max(7.2, subSize * scale);
+  }
+
+  // Recompute with the final font size so the last fit adjustment is reflected
+  // in the rendered lines as well as in their positions.
+  titleLines = wrapSvgText(t, Math.max(3, Math.floor((w - 26) / (titleSize * 0.62))));
+  subLines = sub ? wrapSvgText(sub, Math.max(4, Math.floor((w - 26) / (subSize * 0.62)))) : [];
+  titleLineHeight = titleSize * 1.18;
+  subLineHeight = subSize * 1.2;
+
+  const titleHeight = titleLines.length * titleLineHeight;
+  const subHeight = sub ? 3 + subLines.length * subLineHeight : 0;
+  const totalTextHeight = titleHeight + subHeight;
+  const firstTitleY = y + (h - totalTextHeight) / 2 + titleSize;
+  const firstSubY = firstTitleY + titleHeight + 2;
+  const toText = (lines: string[], firstY: number, lineHeight: number) => lines.map((line, i) => (
+    <tspan key={i} x={tx} y={firstY + i * lineHeight}>{line}</tspan>
+  ));
   return (
     <g>
       <rect x={x} y={y} width={w} height={h} rx="9" fill={fill ?? PANEL} stroke={stroke} strokeWidth={accent || color ? 1.3 : 1} />
-      <text x={tx} y={sub ? y + h / 2 - 3 : y + h / 2 + 4} fill={tcol} fontSize={11.5} fontWeight={700} textAnchor={align} style={{ letterSpacing: 0 }}>{t}</text>
-      {sub && <text x={tx} y={y + h / 2 + 12} fill={DIM} fontSize={9.5} fontWeight={500} textAnchor={align}>{sub}</text>}
+      <defs><clipPath id={clipId}><rect x={x + 3} y={y + 3} width={w - 6} height={h - 6} rx="6" /></clipPath></defs>
+      <g clipPath={`url(#${clipId})`}>
+        <text fill={tcol} fontSize={titleSize} fontWeight={700} textAnchor={align} style={{ letterSpacing: 0 }}>{toText(titleLines, firstTitleY, titleLineHeight)}</text>
+        {sub && <text fill={DIM} fontSize={subSize} fontWeight={500} textAnchor={align}>{toText(subLines, firstSubY, subLineHeight)}</text>}
+      </g>
     </g>
   );
 }
@@ -81,19 +163,19 @@ function Pipeline({ items, y = 86, h = 50, x0 = 24, gap = 16, vb = 640, hi }: { 
 const diagrams: Record<string, () => ReactNode> = {
   // ── CORE INFRA ─────────────────────────────────────────────────────────
   transactions: () => (
-    <Wrap vb="0 0 640 234" caption="All-or-nothing: every instruction executes atomically, or the whole transaction reverts.">
+    <Wrap vb="0 0 640 234" caption="Instructions run as one unit: if one fails, their state changes are reverted. The fee is still charged.">
       {title("Anatomy of a transaction")}
-      <rect x={36} y={36} width={568} height={150} rx={11} fill="none" stroke={A} strokeWidth={1.2} />
+      <rect x={36} y={36} width={568} height={154} rx={11} fill="none" stroke={A} strokeWidth={1.2} />
       {T(54, 54, "TRANSACTION", A, 10.5, 700, "start")}
-      {T(604 - 18, 54, "≤ 1232 bytes", DIM, 10, 600, "end")}
+      {T(586, 54, "legacy/v0 ≤ 1,232 B · v1 ≤ 4,096 B", DIM, 9.5, 600, "end")}
       <Node x={54} y={66} w={532} h={28} t="Signatures[]  ·  one per required signer (64 bytes each)" align="start" />
-      <Node x={54} y={100} w={532} h={28} t="Message › header · account keys[] · recent blockhash (nonce + ~150-slot expiry)" align="start" />
-      <Node x={54} y={134} w={532} h={40} t="Instructions[]" sub="{ program_id, accounts[], data }  — run in order" accent align="start" />
-      {T(320, 212, "fee payer signs · recent blockhash gives a ~30s window at 200ms slots", DIM, 10.5, 500)}
+      <Node x={54} y={100} w={532} h={40} t="Message · header · account keys[]" sub="Recent blockhash: valid for 150 slots · durable nonce is another option" align="start" />
+      <Node x={54} y={146} w={532} h={40} t="Instructions[]" sub="{ program_id, accounts[], data }  — run in order" accent align="start" />
+      {T(320, 212, "fee payer signs · 150 slots is about 30s at the 200ms target", DIM, 10.5, 500)}
     </Wrap>
   ),
   "blocks-slots": () => (
-    <Wrap vb="0 0 640 220" caption="A mainnet slot targets 200ms and is assigned to a leader. Alpenglow slots can contain multiple candidate banks; a skipped slot has no block.">
+    <Wrap vb="0 0 640 220" caption="Mainnet slots target 200ms. A scheduled leader may produce a block; a skipped slot has no block. Under Alpenglow, more than one candidate bank may exist for a slot.">
       {title("Slots vs blocks — slot is the interval, block is the data")}
       {[0, 1, 2, 3, 4, 5].map((i) => {
         const x = 36 + i * 98;
@@ -107,7 +189,7 @@ const diagrams: Record<string, () => ReactNode> = {
         );
       })}
       {T(320, 158, "~5 slots/sec target · slot number is a protocol sequence", MID, 11, 600)}
-      {T(320, 188, "tx blockhash from slot N is valid until ~slot N+150", DIM, 10.5, 500)}
+      {T(320, 188, "a recent blockhash stays valid for up to 150 slots", DIM, 10.5, 500)}
     </Wrap>
   ),
   "proof-of-history": () => (
@@ -124,11 +206,11 @@ const diagrams: Record<string, () => ReactNode> = {
       })}
       {T(345, 158, "Tower-era tx entry between hash 2 → 3", A, 10.5, 700)}
       {arrow(345, 148, 345, 128, A)}
-      {T(320, 196, "verifiers replay the chain in parallel — order is provable with zero messaging", DIM, 10.5, 500)}
+      {T(320, 196, "each hash depends on the previous one · the sequence can be checked later", DIM, 10.5, 500)}
     </Wrap>
   ),
   "compute-units": () => (
-    <Wrap vb="0 0 640 224" caption="Default 200k CU/tx, max 1.4M. Set a tight limit (measure via simulation) and a per-CU price; priority fee = price × limit.">
+    <Wrap vb="0 0 640 224" caption="Legacy/v0 defaults depend on instruction type: 200k CU per program instruction and 3k for most built-ins, capped at 1.4M per transaction. Priority fees use the requested limit. v1 sets limits in the message instead.">
       {title("Compute budget — metering work per transaction")}
       <rect x={40} y={64} width={560} height={40} rx={9} fill={PANEL} stroke={LINE} />
       <rect x={40} y={64} width={330} height={40} rx={9} fill="rgba(20,241,149,.10)" stroke={A} />
@@ -136,14 +218,14 @@ const diagrams: Record<string, () => ReactNode> = {
       {T(205, 95, "what your tx actually consumes", DIM, 9)}
       {T(484, 80, "headroom", DIM, 10, 600)}
       {T(40, 122, "0", DIM, 9.5, 500, "start")}
-      {T(370, 122, "requested limit (200k)", MID, 9.5, 600)}
+      {T(370, 122, "requested limit", MID, 9.5, 600)}
       {T(600, 122, "1.4M max", DIM, 9.5, 500, "end")}
-      <Node x={40} y={150} w={270} h={40} t="setComputeUnitLimit(units)" sub="hard ceiling — exceed it and the tx fails" align="start" />
-      <Node x={330} y={150} w={270} h={40} t="setComputeUnitPrice(µLamports)" sub="priority bid = price × units" align="start" accent />
+      <Node x={40} y={150} w={270} h={40} t="setComputeUnitLimit(units)" sub="legacy/v0: maximum work allowed" align="start" />
+      <Node x={330} y={150} w={270} h={40} t="setComputeUnitPrice(µLamports)" sub="legacy/v0: fee uses price × limit" align="start" accent />
     </Wrap>
   ),
   rent: () => (
-    <Wrap vb="0 0 640 214" caption="Rent is a refundable deposit, not a recurring fee. Fund the rent-exempt minimum; close the account to reclaim every lamport.">
+    <Wrap vb="0 0 640 214" caption="The account storage minimum is refundable, and its rate is changing in phases. Query the RPC for the current amount instead of hardcoding it.">
       {title("Rent exemption — a refundable storage deposit")}
       <Node x={40} y={64} w={250} h={70} t="Account (size = N bytes)" sub="must hold ≥ rent-exempt minimum" accent />
       {T(165, 150, "balance ≥ min_balance(N)", A, 10, 600)}
@@ -151,8 +233,8 @@ const diagrams: Record<string, () => ReactNode> = {
       <Node x={360} y={64} w={110} h={70} t="LIVES" sub="indefinitely" color={A} />
       {arrow(415, 138, 415, 158, DIM)}
       <Node x={345} y={162} w={250} h={36} t="close account → deposit refunded in full" align="middle" color={A} />
-      <Node x={490} y={64} w={105} h={70} t="below min" sub="garbage-collected" color={RED} />
-      {T(165, 196, "~0.00089 SOL for a bare account · scales with bytes", DIM, 10, 500)}
+      <Node x={490} y={64} w={105} h={70} t="below min" sub="not rent-exempt" color={RED} />
+      {T(165, 196, "minimum depends on account size and current network rate", DIM, 10, 500)}
     </Wrap>
   ),
 
@@ -170,27 +252,27 @@ const diagrams: Record<string, () => ReactNode> = {
           </g>
         );
       })}
-      {T(320, 160, "under Tower: 32 consecutive votes → rooted", A, 11.5, 700)}
+      {T(320, 160, "under Tower: deep vote history could root older slots", A, 11.5, 700)}
       {T(320, 192, "Votor now finalizes with direct votes + BLS certificates", DIM, 10.5, 500)}
     </Wrap>
   ),
   alpenglow: () => (
     <Wrap vb="0 0 640 244" caption="Votor is live on mainnet and replaced Tower BFT. Rotor is planned for a later, unscheduled release. Finality targets ~150ms; 200ms slot time is separate.">
       {title("Alpenglow — Votor live · Rotor planned")}
-      <Node x={40} y={50} w={270} h={86} t="VOTOR · LIVE" sub="direct votes + BLS certificates" accent />
-      {T(175, 112, "≈150ms finality target", MID, 9.5, 600)}
-      {T(175, 126, "Tower retired at slot 459,653,000", DIM, 9)}
-      <Node x={330} y={50} w={270} h={86} t="ROTOR · LATER" sub="planned Turbine replacement" />
-      {T(465, 112, "single relay layer · unscheduled", DIM, 9.5, 500)}
+      <Node x={40} y={50} w={270} h={54} t="VOTOR · LIVE" sub="direct votes + BLS certificates" accent />
+      {T(175, 120, "≈150ms finality target", MID, 9.5, 600)}
+      {T(175, 136, "Tower retired at slot 459,653,000", DIM, 9)}
+      <Node x={330} y={50} w={270} h={54} t="ROTOR · LATER" sub="planned Turbine replacement" />
+      {T(465, 120, "planned · release date not set", DIM, 9.5, 500)}
       <Node x={40} y={154} w={270} h={40} t="no vote transactions" sub="Votor replaced Tower's vote txs" color={A} align="start" />
       <Node x={330} y={154} w={270} h={40} t="PoH no longer paces blocks" sub="Clock timestamp source changed" align="start" />
-      {T(320, 222, "mainnet: epoch 1064 · confirmed = finalized", DIM, 10.5, 500)}
+      {T(320, 222, "mainnet: confirmed = finalized · prefer finalized", DIM, 10.5, 500)}
     </Wrap>
   ),
 
   // ── NETWORKING ───────────────────────────────────────────────────────
   turbine: () => (
-    <Wrap vb="0 0 640 238" caption="The leader never sends a full block to everyone. It splits the block into ~1228-byte erasure-coded shreds and fans them through a stake-weighted tree.">
+    <Wrap vb="0 0 640 238" caption="Turbine splits block data into data and coding shreds, then forwards them through a stake-weighted tree. Enough coding data can help validators recover missing pieces. Rotor is planned but not live.">
       {title("Turbine — stake-weighted shred fan-out")}
       <Node x={272} y={36} w={96} h={36} t="Leader" accent />
       {[0, 1, 2].map((i) => {
@@ -211,11 +293,11 @@ const diagrams: Record<string, () => ReactNode> = {
           </g>
         );
       })}
-      {T(320, 228, "~1228-byte erasure-coded shreds · FEC rebuilds the block from a ⅔ subset", DIM, 10.5, 500)}
+      {T(320, 228, "small erasure-coded shreds · enough data and coding shreds can rebuild missing data", DIM, 10.5, 500)}
     </Wrap>
   ),
   "gulf-stream": () => (
-    <Wrap vb="0 0 640 230" caption="No public mempool. RPCs forward signed txs straight to the current and upcoming leaders, who pre-cache them before their slot.">
+    <Wrap vb="0 0 640 230" caption="Solana has no single public pending-transaction pool. RPCs can forward transactions to current and upcoming leaders; providers and leaders may still keep private queues.">
       {title("Gulf Stream — push txs to upcoming leaders")}
       <Node x={36} y={86} w={130} h={50} t="Client + RPC" />
       {arrow(167, 111, 205, 111, DIM)}
@@ -229,22 +311,22 @@ const diagrams: Record<string, () => ReactNode> = {
           </g>
         );
       })}
-      {T(320, 214, "deterministic leader schedule = no frontrunnable pending pool · stale blockhash is dropped", DIM, 10.5, 500)}
+      {T(320, 214, "leader schedule is known ahead · forwarding does not guarantee inclusion", DIM, 10.5, 500)}
     </Wrap>
   ),
   "quic-swqos": () => (
-    <Wrap vb="0 0 640 218" caption="QUIC gives ingest connection identity + flow control. SWQoS reserves most of the leader's intake for stake-weighted peers, so spam can't crowd out real traffic.">
+    <Wrap vb="0 0 640 218" caption="QUIC manages connections and flow control. Stake-Weighted QoS gives stake-weighted peers reserved transaction intake; exact capacity depends on validator settings.">
       {title("QUIC ingest + Stake-Weighted QoS")}
       <Node x={36} y={70} w={150} h={50} t="senders" sub="RPCs / wallets" />
       {arrow(187, 95, 233, 95, DIM)}
       <Node x={236} y={56} w={140} h={78} t="Leader QUIC" sub="rate-limited intake" accent />
       <rect x={400} y={56} width={200} height={36} rx={8} fill="rgba(20,241,149,.10)" stroke={A} />
-      {T(500, 78, "staked lane ≈ 80%", A, 10.5, 700)}
+      {T(500, 78, "stake-weighted lane", A, 10.5, 700)}
       <rect x={400} y={98} width={200} height={36} rx={8} fill={PANEL} stroke={LINE} />
-      {T(500, 120, "unstaked ≈ 20%", DIM, 10.5, 600)}
+      {T(500, 120, "other traffic", DIM, 10.5, 600)}
       {arrow(377, 78, 399, 78, A)}
       {arrow(377, 116, 399, 116, DIM)}
-      {T(320, 176, "a staked sender rides the reserved lane — same tx lands when a public RPC's is dropped", DIM, 10.5, 500)}
+      {T(320, 176, "reserved intake can help a tx reach the leader · it cannot guarantee execution", DIM, 10.5, 500)}
     </Wrap>
   ),
   "gossip-repair": () => (
@@ -265,39 +347,39 @@ const diagrams: Record<string, () => ReactNode> = {
     </Wrap>
   ),
   doublezero: () => (
-    <Wrap vb="0 0 640 226" caption="A dedicated fiber network for consensus. An outer public ring filters/dedups (FPGAs at line rate); an inner ring multicasts each block to all validators at once.">
+    <Wrap vb="0 0 640 226" caption="DoubleZero is an opt-in network for validator traffic. Its fiber links and network services can improve how participating validators exchange data; details depend on deployment.">
       {title("DoubleZero — private fiber + multicast")}
       <ellipse cx={320} cy={120} rx={290} ry={92} fill="none" stroke={LINE} strokeDasharray="5 5" />
-      {T(320, 48, "outer ring · public ingress + FPGA filter/dedup", DIM, 10, 600)}
+      {T(320, 48, "validator traffic over a dedicated network", DIM, 10, 600)}
       <ellipse cx={320} cy={128} rx={170} ry={56} fill="none" stroke={A} />
       <Node x={272} y={108} w={96} h={40} t="Leader" accent />
       {[[150, 128], [490, 128], [320, 186]].map(([x, y], i) => (
         <g key={i}>{arrow(320, 128, (x as number) > 320 ? (x as number) - 36 : (x as number) + 36, y as number, A)}<Node x={(x as number) - 40} y={(y as number) - 16} w={80} h={32} t={`validator`} /></g>
       ))}
-      {T(320, 218, "inner ring · multicast = one broadcast reaches every validator (≈50% lower latency)", A, 10, 600)}
+      {T(320, 218, "participating validators exchange data over private links", A, 10, 600)}
     </Wrap>
   ),
 
   // ── DATA FLOW ────────────────────────────────────────────────────────
   "tx-lifecycle": () => (
-    <Wrap vb="0 0 640 188" caption="Under Alpenglow, processed is provisional and confirmed/finalized describe the same consensus state. Votor finality targets ~150ms. There is no public mempool, so clients still need retry logic.">
+    <Wrap vb="0 0 640 188" caption="`processed` is provisional. On mainnet, `confirmed` currently matches `finalized`; prefer `finalized` in new code because `confirmed` is planned for removal. Retry only while the blockhash is valid.">
       {title("Transaction lifecycle — sign to finality")}
       <Pipeline items={[{ t: "Client", sub: "sign" }, { t: "RPC", sub: "forward" }, { t: "Leader", sub: "execute" }, { t: "Turbine", sub: "propagate" }, { t: "Votor", sub: "BLS cert" }, { t: "Final", sub: "≈150ms" }]} y={70} h={52} hi={5} />
-      {T(320, 162, "Alpenglow target ≈150ms · confirmed and finalized now match", DIM, 10.5, 500)}
+      {T(320, 162, "Alpenglow target ≈150ms · prefer finalized for new code", DIM, 10.5, 500)}
     </Wrap>
   ),
   "lookup-tables": () => (
-    <Wrap vb="0 0 640 214" caption="Each inline address is 32 bytes; an ALT reference is a 1-byte index. A warmed, reusable table lifts the practical ceiling from ~35 to 256 accounts per v0 tx.">
+    <Wrap vb="0 0 640 214" caption="An ALT can store 256 addresses and lets a v0 message use 1-byte indices. A transaction still has a 64-account runtime limit, including loaded accounts.">
       {title("Address Lookup Tables — index, don't inline")}
-      <Node x={40} y={58} w={250} h={44} t="legacy: 32 bytes per address" sub="≈ 35 accounts before 1232B wall" color={YEL} align="start" />
-      <Node x={40} y={112} w={250} h={44} t="v0 + ALT: 1-byte index" sub="up to 256 accounts in one tx" accent align="start" />
+      <Node x={40} y={58} w={250} h={44} t="legacy: full address in message" sub="about 32 accounts in practice" color={YEL} align="start" />
+      <Node x={40} y={112} w={250} h={44} t="v0 + ALT: 1-byte index" sub="table stores 256 · tx limit is 64" accent align="start" />
       <Node x={360} y={66} w={240} h={82} t="Lookup Table (on-chain)" sub="[ pubkey0, pubkey1, … pubkeyN ]" />
       {arrow(292, 134, 358, 110, A)}
-      {T(480, 178, "create once · warm ~1 slot · reuse forever", DIM, 10, 500)}
+      {T(480, 178, "create · wait for activation · reuse", DIM, 10, 500)}
     </Wrap>
   ),
   geyser: () => (
-    <Wrap vb="0 0 640 210" caption="Geyser hooks the validator's write path and pushes every account/tx/slot update out in real time — no polling, no gaps. The basis of indexers and the DAS API.">
+    <Wrap vb="0 0 640 210" caption="Geyser plugins stream validator updates to consumers. Streams can disconnect or lag; deduplicate events and use a provider's replay or backfill tools to catch up.">
       {title("Geyser — stream the validator, don't poll it")}
       <Node x={36} y={78} w={150} h={54} t="Validator" sub="write path" accent />
       {arrow(187, 105, 233, 105, A)}
@@ -306,7 +388,7 @@ const diagrams: Record<string, () => ReactNode> = {
         const y = 56 + i * 42;
         return (<g key={i}>{arrow(388, 105, 436, y + 16, DIM)}<Node x={438} y={y} w={166} h={32} t={["indexer / DAS", "Kafka / queue", "Postgres / cache"][i]} /></g>);
       })}
-      {T(320, 192, "filter server-side by program / owner / signature · consumers should be idempotent", DIM, 10.5, 500)}
+      {T(320, 192, "filter updates · deduplicate events · reconnect and catch up after gaps", DIM, 10.5, 500)}
     </Wrap>
   ),
 
@@ -314,25 +396,22 @@ const diagrams: Record<string, () => ReactNode> = {
   "accounts-model": () => (
     <Wrap vb="0 0 640 214" caption="Programs are stateless — code and state live in separate accounts. A data account names its owning program; only that program can mutate it.">
       {title("Accounts — code and state are separate")}
-      <Node x={44} y={56} w={250} h={130} t="PROGRAM ACCOUNT" sub="executable: true · holds SBF code" accent />
-      {T(169, 120, "stateless logic", MID, 10.5, 600)}
-      {T(169, 150, "owns data accounts →", DIM, 10, 500)}
+      <Node x={44} y={64} w={250} h={84} t="PROGRAM ACCOUNT" sub="executable code" accent />
       {arrow(296, 121, 344, 121, A)}
-      <Node x={346} y={56} w={250} h={130} t="DATA ACCOUNT" sub="owner = program" />
-      {T(471, 120, "lamports + data[]", FG, 11, 600)}
-      {T(471, 144, "rent-exempt", MID, 10, 500)}
-      {T(471, 166, "only owner writes", DIM, 10, 500)}
+      <Node x={346} y={64} w={250} h={84} t="DATA ACCOUNT" sub="mutable state · owner = program" />
+      {T(169, 180, "program runs the logic", MID, 10.5, 600)}
+      {T(471, 180, "only its owner can change the data", DIM, 10, 500)}
     </Wrap>
   ),
   "instructions-cpis": () => (
-    <Wrap vb="0 0 640 222" caption="A tx carries ordered instructions; each targets one program. Programs call other programs via CPI — invoke (or invoke_signed for PDA-signed) — up to a depth of 4.">
+    <Wrap vb="0 0 640 222" caption="Instructions run in order. A program can call another with `invoke`, or sign for its PDA with `invoke_signed`. The current maximum is four nested CPIs (five stack frames including the first program).">
       {title("Instructions & Cross-Program Invocations")}
       <Node x={40} y={50} w={150} h={130} t="Transaction" sub="instructions[]" accent />
       {[0, 1].map((i) => { const y = 64 + i * 60; return <g key={i}>{arrow(191, y + 16, 233, y + 16, DIM)}<Node x={236} y={y} w={150} h={40} t={`ix ${i + 1}`} sub="program_id, accounts, data" /></g>; })}
       <Node x={236} y={64} w={150} h={40} t="Program A" sub="ix 1" accent />
       {arrow(388, 84, 430, 84, A)}
       <Node x={432} y={64} w={170} h={40} t="Program B (CPI)" sub="invoke / invoke_signed" />
-      {T(320, 204, "atomic: any instruction or CPI fails → the whole transaction reverts · max CPI depth 4", DIM, 10.5, 500)}
+      {T(320, 204, "current limit: 4 nested CPIs · SIMD-0268 proposes 8, not active", DIM, 10.5, 500)}
     </Wrap>
   ),
   sealevel: () => (
@@ -361,14 +440,14 @@ const diagrams: Record<string, () => ReactNode> = {
     </Wrap>
   ),
   "svm-bytecode": () => (
-    <Wrap vb="0 0 640 200" caption="Rust/C compiles to SBF (a Solana eBPF dialect), executed by the sandboxed rBPF VM. The verifier rejects unbounded loops; every opcode costs compute units.">
+    <Wrap vb="0 0 640 200" caption="Rust or C compiles to sBPF, which runs in the sandboxed rBPF VM. The verifier checks bytecode safety; compute-unit limits meter the work done at runtime.">
       {title("SVM bytecode — Rust → SBF → rBPF VM")}
       <Pipeline items={[{ t: "Rust / C", sub: "source" }, { t: "cargo build-sbf", sub: "compile" }, { t: "SBF ELF", sub: ".so bytecode" }, { t: "rBPF VM", sub: "sandbox · metered" }]} y={70} h={54} hi={3} />
       {T(320, 162, "11 registers · bounded stack · restricted syscalls · isolated from other programs", DIM, 10.5, 500)}
     </Wrap>
   ),
   "memory-allocator": () => (
-    <Wrap vb="0 0 640 230" caption="The heap is a bump allocator: alloc just advances a pointer and free is a no-op. 32 KiB by default (reset each instruction), up to 256 KiB via RequestHeapFrame. Stack frames are only 4 KiB.">
+    <Wrap vb="0 0 640 230" caption="Programs have a 32 KiB default heap and 4 KiB stack frames. `RequestHeapFrame` can raise the heap to 256 KiB for each program in the transaction, including CPIs. The default allocator does not reclaim freed memory during an invocation.">
       {title("A program's memory map (rBPF)")}
       <Node x={28} y={50} w={140} h={48} t="Program code" sub="read-only · SBF" />
       <Node x={180} y={50} w={140} h={48} t="Stack" sub="4 KiB / frame" color={YEL} />
@@ -381,7 +460,7 @@ const diagrams: Record<string, () => ReactNode> = {
       {arrow(250, 155, 286, 155, A)}
       {T(300, 159, "bump pointer →", MID, 10, 600, "start")}
       {T(596, 159, "dealloc = no-op", DIM, 10, 600, "end")}
-      {T(320, 200, "free()/Drop never reclaims heap within an instruction · a big stack local overflows the 4 KiB frame", DIM, 10, 500)}
+      {T(320, 200, "deallocation does not reclaim heap · large stack values can exceed one frame", DIM, 10, 500)}
     </Wrap>
   ),
   signatures: () => (
@@ -423,10 +502,10 @@ const diagrams: Record<string, () => ReactNode> = {
 
   // ── SYSTEM DESIGN ────────────────────────────────────────────────────
   accountsdb: () => (
-    <Wrap vb="0 0 640 202" caption="Three stores: the Ledger is append-only history, AccountsDB is live current state (memory-mapped, O(1)), and Snapshots let a fresh node bootstrap without replaying genesis.">
+    <Wrap vb="0 0 640 202" caption="The ledger stores block history, AccountsDB holds current account state, and snapshots help validators load a recent state before replaying newer ledger data.">
       {title("A validator's three data stores")}
       <Node x={40} y={62} w={175} h={72} t="Ledger" sub="append-only history" />
-      <Node x={232} y={62} w={175} h={72} t="AccountsDB" sub="current state · in-memory" accent />
+      <Node x={232} y={62} w={175} h={72} t="AccountsDB" sub="account files + indexes" accent />
       <Node x={424} y={62} w={176} h={72} t="Snapshot" sub="periodic state dump" />
       {arrow(232, 98, 216, 98, DIM)}
       {arrow(407, 98, 423, 98, DIM)}
@@ -437,9 +516,9 @@ const diagrams: Record<string, () => ReactNode> = {
     </Wrap>
   ),
   "banking-stage": () => (
-    <Wrap vb="0 0 640 206" caption="Inside the leader's TPU, verified txs hit the Banking Stage. A central scheduler builds a conflict graph and runs non-conflicting txs across worker threads; PoH stamps the result.">
+    <Wrap vb="0 0 640 206" caption="The leader pipeline verifies and executes transactions. The Banking Stage schedules work that does not conflict on writable accounts; PoH no longer paces block production under Alpenglow.">
       {title("Banking Stage — the parallel scheduler")}
-      <Pipeline items={[{ t: "Fetch", sub: "QUIC" }, { t: "SigVerify", sub: "signatures" }, { t: "Banking", sub: "scheduler" }, { t: "PoH / record", sub: "stamp" }]} y={56} h={48} hi={2} />
+      <Pipeline items={[{ t: "Fetch", sub: "QUIC" }, { t: "SigVerify", sub: "signatures" }, { t: "Banking", sub: "scheduler" }, { t: "Record", sub: "block data" }]} y={56} h={48} hi={2} />
       <Node x={300} y={120} w={150} h={28} t="worker 1 · {A}" align="start" accent />
       <Node x={300} y={152} w={150} h={28} t="worker 2 · {B}" align="start" accent />
       <Node x={460} y={120} w={150} h={28} t="hot account P" sub="serializes" color={RED} align="start" />
@@ -451,7 +530,7 @@ const diagrams: Record<string, () => ReactNode> = {
 
   // ── MEV ──────────────────────────────────────────────────────────────
   mev: () => (
-    <Wrap vb="0 0 640 196" caption="With no public mempool, the leader controls in-block ordering. A sandwich places a buy before and a sell after the victim's swap to profit from the price it moves.">
+    <Wrap vb="0 0 640 196" caption="There is no single public pending-transaction pool, but order flow can be private. A sandwich places a buy before and a sell after a swap to profit from its price impact.">
       {title("MEV — the leader orders txs inside the block")}
       {[["front-run", A], ["victim swap", YEL], ["back-run", A]].map(([label, c], i) => {
         const x = 60 + i * 180;
@@ -461,95 +540,91 @@ const diagrams: Record<string, () => ReactNode> = {
     </Wrap>
   ),
   sandwich: () => (
-    <Wrap vb="0 0 640 210" caption="Defenses: tight slippage caps the gap an attacker can exploit, and atomic Jito bundles or private order flow remove the ordering opportunity entirely.">
+    <Wrap vb="0 0 640 210" caption="A tight slippage limit caps how far execution can move from the quote. Private submission can reduce exposure, but neither protection guarantees a trade cannot be sandwiched.">
       {title("Sandwich attack & protection")}
       {[["1 · attacker buys", A], ["2 · YOUR swap", YEL], ["3 · attacker sells", A]].map(([label, c], i) => {
         const x = 50 + i * 185;
         return <g key={i}><Node x={x} y={56} w={155} h={44} t={label as string} color={c as string} />{i < 2 && arrow(x + 156, 78, x + 185 - 1, 78, DIM)}</g>;
       })}
       <Node x={50} y={128} w={250} h={44} t="tight slippage tolerance" sub="caps the exploitable gap" accent align="start" />
-      <Node x={330} y={128} w={260} h={44} t="atomic bundle / private flow" sub="removes the ordering window" accent align="start" />
+      <Node x={330} y={128} w={260} h={44} t="private routing / atomic bundle" sub="may reduce some exposure" accent align="start" />
       {T(320, 196, "wide slippage on a thin pool is the open invitation", DIM, 10.5, 500)}
     </Wrap>
   ),
   jito: () => (
-    <Wrap vb="0 0 640 200" caption="Searchers submit bundles (≤5 txs, atomic, ordered) with a tip. The off-chain Block Engine auctions placement to the highest tip and forwards winners to the leader.">
+    <Wrap vb="0 0 640 200" caption="Searchers submit ordered bundles of up to five transactions with a tip. The Block Engine runs auctions and may forward winning bundles to a leader; a tip does not guarantee inclusion.">
       {title("Jito — bundles + off-chain auction")}
       <Node x={36} y={78} w={130} h={50} t="searchers" sub="build bundles" />
       {arrow(167, 103, 209, 103, DIM)}
       <Node x={212} y={70} w={170} h={66} t="Block Engine" sub="sealed tip auction" accent />
       {arrow(383, 103, 425, 103, A)}
       <Node x={428} y={78} w={170} h={50} t="Leader" sub="includes winners" />
-      {T(297, 168, "bundle = ≤5 txs, atomic & ordered · highest tip wins placement", DIM, 10.5, 500)}
+      {T(297, 168, "up to 5 txs · ordered · all-or-nothing", DIM, 10.5, 500)}
     </Wrap>
   ),
 
   // ── ECONOMICS ────────────────────────────────────────────────────────
   "priority-fees": () => (
-    <Wrap vb="0 0 640 196" caption="Total fee = base (5000 lamports/signature) + priority (CU price × CU limit). Priority is a per-account bid for inclusion when block space is contended.">
+    <Wrap vb="0 0 640 196" caption="Legacy/v0 total fee = base fee + priority fee (CU price × requested limit). v1 sets a total priority fee in its message. Priority can improve scheduling, but does not guarantee inclusion.">
       {title("Priority fees — bidding for block space")}
       <Node x={40} y={64} w={250} h={50} t="base fee" sub="5000 lamports / signature" />
       {T(305, 95, "+", FG, 18, 700)}
-      <Node x={330} y={64} w={270} h={50} t="priority fee = µLamports/CU × CU limit" sub="optional bid for inclusion" accent align="start" />
-      {T(320, 156, "local market: you bid only against txs touching the SAME accounts", DIM, 10.5, 500)}
+      <Node x={330} y={64} w={270} h={50} t="legacy/v0: price × requested limit" sub="v1: total fee in message config" accent align="start" />
+      {T(320, 156, "priority fee can improve scheduling · it is not a guarantee", DIM, 10.5, 500)}
     </Wrap>
   ),
   "fee-economics": () => (
-    <Wrap vb="0 0 640 200" caption="Half of every base fee is burned (deflationary pressure); the rest goes to the block producer. 100% of priority fees go to the validator.">
+    <Wrap vb="0 0 640 200" caption="Half of the base fee is burned and half goes to the block-producing validator. The validator receives all of the priority fee.">
       {title("Fee economics — burn vs validator")}
       <Node x={120} y={56} w={400} h={36} t="transaction fee" accent />
       {arrow(220, 93, 200, 118, DIM)}
       {arrow(420, 93, 440, 118, DIM)}
-      <Node x={100} y={120} w={200} h={48} t="50% BURNED" sub="reduces SOL supply" color={RED} />
+      <Node x={100} y={120} w={200} h={48} t="50% BURNED" sub="of the base fee" color={RED} />
       <Node x={340} y={120} w={200} h={48} t="50% to validator" sub="+ 100% of priority fees" color={A} />
-      {T(320, 188, "burn makes activity deflationary · priority fees fully reward the producer", DIM, 10.5, 500)}
+      {T(320, 188, "burning half the base fee alone does not determine net SOL supply", DIM, 10.5, 500)}
     </Wrap>
   ),
   "local-fee-markets": () => (
-    <Wrap vb="0 0 640 200" caption="Fees are priced per-account, not globally. A hot mint spikes fees only for txs touching it; unrelated transactions elsewhere stay at the base fee.">
+    <Wrap vb="0 0 640 200" caption="Congestion is often local to writable accounts. A hot pool can contend with transactions that touch it, while unrelated transactions may face less competition. Fees are not strictly priced per account.">
       {title("Local fee markets — contention is per-account")}
-      <Node x={40} y={60} w={260} h={56} t="hot account (viral mint)" sub="fees SPIKE here only" color={RED} />
-      <Node x={340} y={60} w={260} h={56} t="unrelated accounts" sub="stay cheap — base fee" color={A} />
+      <Node x={40} y={60} w={260} h={56} t="contended writable account" sub="more competition for block space" color={RED} />
+      <Node x={340} y={60} w={260} h={56} t="unrelated accounts" sub="may face less competition" color={A} />
       {T(170, 150, "bidding war", RED, 10.5, 600)}
       {T(470, 150, "unaffected", A, 10.5, 600)}
-      {T(320, 182, "estimate priority against the exact accounts your tx writes — never a global average", DIM, 10.5, 500)}
+      {T(320, 182, "check recent fees for the accounts your transaction locks", DIM, 10.5, 500)}
     </Wrap>
   ),
   "validator-economics": () => (
-    <Wrap vb="0 0 640 206" caption="Revenue: inflation (stake-weighted) + fee share + Jito MEV tips — which now rival inflation for top validators. Cost: vote transactions (~1+ SOL/day).">
+    <Wrap vb="0 0 640 206" caption="Validator revenue can include stake-weighted rewards, transaction fees, and MEV tips. Costs vary by operator and include hardware, network, and vote-account expenses.">
       {title("Validator economics — revenue vs cost")}
       {[["Inflation rewards", "stake-weighted"], ["Fee share", "50% base + priority"], ["MEV tips", "via Jito"]].map(([t1, s], i) => {
         const x = 40 + i * 200;
         return <Node key={i} x={x} y={58} w={180} h={56} t={t1} sub={s} accent />;
       })}
-      {T(320, 150, "− vote costs (~1+ SOL/day) − hardware/bandwidth", RED, 11, 600)}
-      {T(320, 182, "tips can now exceed inflation — why stakers favor MEV-enabled validators", DIM, 10.5, 500)}
+      {T(320, 150, "− vote-account fees − hardware and network costs", RED, 11, 600)}
+      {T(320, 182, "revenue and operating costs vary across validators", DIM, 10.5, 500)}
     </Wrap>
   ),
 
   // ── FRONTIER / INFRA ─────────────────────────────────────────────────
   firedancer: () => (
-    <Wrap vb="0 0 640 200" caption="Independent client implementations of the SAME network. A consensus bug in one can't halt the chain if another disagrees — the diversity that prevents outages.">
+    <Wrap vb="0 0 640 200" caption="Independent clients implement the same protocol. Client diversity can reduce shared software risk, but every client still has to agree on the same state.">
       {title("Validator clients — one network, many implementations")}
       <Node x={36} y={64} w={180} h={62} t="Agave" sub="Rust · Anza (reference)" />
       <Node x={230} y={64} w={180} h={62} t="Frankendancer" sub="FD networking + Agave runtime" accent />
       <Node x={424} y={64} w={180} h={62} t="Firedancer" sub="pure C · Jump" accent />
-      {T(320, 162, "must agree bit-for-bit on state · no single client should hold > ⅓ of stake", DIM, 10.5, 500)}
+      {T(320, 162, "independent implementations reduce shared bug risk", DIM, 10.5, 500)}
     </Wrap>
   ),
   "async-execution": () => (
-    <Wrap vb="0 0 640 214" caption="Throughput scales two ways: raising the per-block compute ceiling, and decoupling ordering from execution (APE) so block production isn't bound by single-thread replay.">
+    <Wrap vb="0 0 640 214" caption="The 100M compute-unit block limit is live on mainnet. Asynchronous Program Execution (APE) is a separate research direction, not part of the live runtime.">
       {title("Scaling — bigger blocks + async execution")}
-      <Node x={40} y={56} w={110} h={40} t="48M" sub="legacy" />
-      {arrow(151, 76, 169, 76, DIM)}
-      <Node x={170} y={56} w={110} h={40} t="60M" sub="SIMD-0256" accent />
-      {arrow(281, 76, 299, 76, DIM)}
-      <Node x={300} y={56} w={120} h={40} t="100M" sub="SIMD-0286 (proposed)" />
-      {T(320, 132, "Asynchronous Program Execution (APE)", FG, 11.5, 700)}
+      <Node x={260} y={56} w={120} h={40} t="100M CU" sub="live on mainnet" accent />
+      {T(320, 132, "APE · research direction", FG, 11.5, 700)}
       <Node x={120} y={146} w={190} h={40} t="consensus orders txs" sub="agree on sequence" accent align="start" />
       {arrow(312, 166, 332, 166, DIM)}
       <Node x={334} y={146} w={190} h={40} t="state computed after" sub="off the critical path" align="start" />
-      {T(320, 204, "ordering is still final — only state computation moves off the hot path", DIM, 10.5, 500)}
+      {T(320, 204, "model: agree on order first · compute resulting state after", DIM, 10.5, 500)}
     </Wrap>
   ),
 
@@ -562,13 +637,13 @@ const diagrams: Record<string, () => ReactNode> = {
       <Node x={222} y={70} w={170} h={66} t="RPC node" sub="reads + tx forwarding" accent />
       {arrow(393, 103, 435, 103, A)}
       <Node x={438} y={78} w={166} h={50} t="leaders / cluster" />
-      {T(310, 168, "sendTransaction is fire-and-forget · staked senders land better under load", DIM, 10.5, 500)}
+      {T(310, 168, "sending returns a signature · track confirmation separately", DIM, 10.5, 500)}
     </Wrap>
   ),
   clusters: () => (
-    <Wrap vb="0 0 640 196" caption="Same software, separate networks. Build on localnet/devnet (free airdrops), stage on testnet (where upgrades bake), ship to mainnet-beta (real value).">
+    <Wrap vb="0 0 640 196" caption="Each cluster has separate accounts and programs. Use localnet or devnet while building, test against the target cluster before launch, and treat mainnet as real value.">
       {title("Solana clusters — four separate networks")}
-      {[["localnet", "your machine"], ["devnet", "free airdrops"], ["testnet", "upgrade staging"], ["mainnet-beta", "real value"]].map(([t1, s], i) => {
+      {[["localnet", "your machine"], ["devnet", "app testing"], ["testnet", "network testing"], ["mainnet-beta", "real value"]].map(([t1, s], i) => {
         const x = 36 + i * 152;
         return <Node key={i} x={x} y={70} w={138} h={58} t={t1} sub={s} accent={i === 3} />;
       })}
@@ -576,9 +651,9 @@ const diagrams: Record<string, () => ReactNode> = {
     </Wrap>
   ),
   "epochs-validators": () => (
-    <Wrap vb="0 0 640 196" caption="An epoch is 432,000 slots (~2–3 days). The leader schedule is computed per epoch from stake weights; stake activation/deactivation and rewards align to epoch boundaries.">
-      {title("Epochs — 432,000 slots of fixed leader schedule")}
-      <Node x={40} y={64} w={250} h={56} t="Epoch N" sub="432,000 slots (~2–3 days)" accent />
+    <Wrap vb="0 0 640 196" caption="An epoch is currently about 432,000 slots. At the 200ms slot target that is roughly one day, though skips and schedule changes affect elapsed time. Stake and reward changes follow epoch rules.">
+      {title("Epochs — roughly 432,000 slots")}
+      <Node x={40} y={64} w={250} h={56} t="Epoch N" sub="about 432,000 slots · ~1 day" accent />
       {arrow(291, 92, 331, 92, DIM)}
       <Node x={334} y={64} w={250} h={56} t="Epoch N+1" sub="new leader schedule" />
       {T(165, 150, "schedule fixed at epoch start", DIM, 10, 500)}
@@ -587,12 +662,15 @@ const diagrams: Record<string, () => ReactNode> = {
     </Wrap>
   ),
   "versioned-tx": () => (
-    <Wrap vb="0 0 640 196" caption="v0 transactions add Address Lookup Table support, so a single tx can reference up to 256 accounts. Legacy txs are capped at ~35. Always set maxSupportedTransactionVersion.">
-      {title("Versioned (v0) vs legacy transactions")}
-      <Node x={40} y={64} w={250} h={64} t="legacy" sub="inline accounts · ≈ 35 max" color={YEL} />
-      <Node x={350} y={64} w={250} h={64} t="v0 (versioned)" sub="ALT support · up to 256 accounts" accent />
-      {arrow(292, 96, 348, 96, A)}
-      {T(320, 168, "complex DeFi routes need v0 + ALTs to fit under the 1232-byte limit", DIM, 10.5, 500)}
+    <Wrap vb="0 0 640 216" caption="Legacy and v0 transactions are limited to 1,232 bytes; v1 allows 4,096 bytes. All three currently allow at most 64 accounts. Only v0 supports ALTs, and SIMD-0596's proposed 96-account limit is not active.">
+      {title("Three transaction formats")}
+      <Node x={28} y={62} w={174} h={72} t="Legacy" sub="1,232 B · ~32 accounts" color={YEL} />
+      <Node x={233} y={62} w={174} h={72} t="v0" sub="1,232 B · ALT · max 64" accent />
+      <Node x={438} y={62} w={174} h={72} t="v1 · active" sub="4,096 B · inline · max 64" accent />
+      {arrow(204, 98, 231, 98, DIM)}
+      {arrow(409, 98, 436, 98, DIM)}
+      {T(320, 166, "ALT tables store 256 addresses · one transaction still loads up to 64", DIM, 10.5, 500)}
+      {T(320, 193, "SIMD-0596 proposes 96 accounts · not active", DIM, 10, 500)}
     </Wrap>
   ),
 };

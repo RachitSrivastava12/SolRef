@@ -1,19 +1,18 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, ExternalLink, BookOpen, FileText, Route, Sparkles } from "lucide-react";
+import { ArrowRight, ExternalLink, BookOpen, FileText, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
 import Layout from "../components/Layout";
 import RaysHero from "../components/RaysHero";
-import { concepts, conceptById, metaFor, iconFor, levelMeta } from "../lib/concepts";
+import { concepts, conceptById, metaFor } from "../lib/concepts";
 import { innovations } from "../lib/innovations";
 import { chapters, hotPathStages } from "../lib/chapters";
 
 const RPC = (import.meta.env.VITE_SOLANA_RPC as string) || "https://api.mainnet-beta.solana.com";
 
 const PILLARS = [
+  { to: "/learn", icon: <BookOpen size={18} />, label: "Curriculum", title: `${chapters.length} ordered tracks`, desc: "Start with foundations; finish with the protocol frontier." },
   { to: "/docs", icon: <FileText size={18} />, label: "Reference", title: `${concepts.length} concept pages`, desc: "Focused, source-aware references for Solana internals." },
-  { to: "/deep-dives", icon: <BookOpen size={18} />, label: "Depth", title: `${chapters.length} study tracks`, desc: "A curated path through the validator hot path and core internals." },
   { to: "/innovations", icon: <Sparkles size={18} />, label: "Architecture", title: `${innovations.length} protocol systems`, desc: "The mechanisms and frontier upgrades behind Solana throughput." },
-  { to: "/learn", icon: <Route size={18} />, label: "Path", title: "Guided reading", desc: "Beginner, intermediate, and advanced references in order." },
 ];
 
 const INTERACTIVE = [
@@ -63,8 +62,8 @@ function useLiveTps() {
 
 export default function Landing() {
   const { tps, epoch } = useLiveTps();
-  const featured = ["proof-of-history", "tower-bft", "alpenglow", "banking-stage", "svm-bytecode", "accountsdb"]
-    .map((id) => concepts.find((c) => metaFor(c.title).id === id)).filter(Boolean) as typeof concepts;
+  const startChapter = chapters[0];
+  const finishChapter = chapters[chapters.length - 1];
 
   return (
     <Layout>
@@ -97,15 +96,36 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="shell" style={{ paddingTop: 74 }}>
+      <section className="shell" style={{ paddingTop: 58 }}>
+        <div className="landing-start">
+          <div className="landing-start__main">
+            <div className="eyebrow">Start here · Track 01 of {chapters.length}</div>
+            <h2>Core Foundations</h2>
+            <p>Begin with transactions, accounts, instructions, signatures, and clusters. The route then follows execution, network data, finality, and fees.</p>
+            {startChapter && (
+              <Link to={`/deep-dives/${startChapter.id}`} className="btn btn-grad">
+                Start with Track 01 <ArrowRight size={16} />
+              </Link>
+            )}
+          </div>
+          {finishChapter && (
+            <Link to={`/deep-dives/${finishChapter.id}`} className="landing-start__finish">
+              <span>Finish line · Track {String(finishChapter.sequence).padStart(2, "0")}</span>
+              <strong>{finishChapter.title}</strong>
+              <small>Connect the whole system at the protocol frontier <ArrowRight size={13} /></small>
+            </Link>
+          )}
+        </div>
+      </section>
+
+      <section className="shell" style={{ paddingTop: 66 }}>
         <div className="landing-head landing-head--compact" style={{ marginTop: 0 }}>
           <div>
-            <div className="eyebrow">The hot path</div>
-            <h2>One transaction, end to end.</h2>
+            <div className="eyebrow">Track 03 preview · after foundations and runtime</div>
+            <h2>Inside the validator: one transaction, end to end.</h2>
           </div>
           <p>
-            Follow a single transaction from the moment it reaches a validator to the moment its state is committed —
-            ingress, scheduling, execution, state writes, and propagation, in order.
+            See the validator journey here after you have the data model. The full curriculum starts with Track 01 and builds toward this execution path.
           </p>
         </div>
         <div className="hot-path">
@@ -118,34 +138,6 @@ export default function Landing() {
                 <strong>{stage.label}</strong>
                 <em>{stage.detail}</em>
                 <small>{concept?.tag ?? "Track"}</small>
-              </Link>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="shell" style={{ paddingTop: 76 }}>
-        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 26, flexWrap: "wrap", gap: 12 }}>
-          <div>
-            <div className="eyebrow">Start here</div>
-            <h2 className="section-title" style={{ marginTop: 8 }}>Internals worth studying properly</h2>
-          </div>
-          <Link to="/deep-dives" style={{ fontSize: 14, color: "var(--text-mid)", display: "inline-flex", alignItems: "center", gap: 6 }}>Open deep dives <ArrowRight size={14} /></Link>
-        </div>
-        <div className="doc-list">
-          {featured.map((c, i) => {
-            const m = metaFor(c.title);
-            return (
-              <Link key={m.id} to={`/docs/${m.id}`} className="doc-row">
-                <span className="doc-row__icon">{iconFor(c.icon)}</span>
-                <div>
-                  <div className="doc-row__title">
-                    <strong>{c.title}</strong>
-                    <span>{levelMeta[m.level].label}</span>
-                  </div>
-                  <p>{c.desc}</p>
-                </div>
-                <ArrowRight size={14} style={{ color: i === 0 ? "var(--neon-green)" : "var(--text-dim)" }} />
               </Link>
             );
           })}
@@ -185,10 +177,11 @@ export default function Landing() {
       <section className="shell" style={{ paddingTop: 56 }}>
         <div className="grad-border" style={{ borderRadius: "var(--r-lg)", padding: "30px 28px", textAlign: "center", overflow: "hidden", position: "relative", maxWidth: 760, margin: "0 auto" }}>
           <div style={{ position: "relative" }}>
-            <h2 style={{ fontSize: 24, fontWeight: 750, margin: "0 0 8px", letterSpacing: 0 }}>Start with the path.</h2>
-            <p style={{ color: "var(--text-mid)", fontSize: 14.5, maxWidth: 440, margin: "0 auto 22px" }}>Hot path first, then consensus/finality, then runtime and state.</p>
+            <div className="eyebrow" style={{ marginBottom: 8 }}>The finish line</div>
+            <h2 style={{ fontSize: 24, fontWeight: 750, margin: "0 0 8px", letterSpacing: 0 }}>Explain one transaction from signature to finality.</h2>
+            <p style={{ color: "var(--text-mid)", fontSize: 14.5, maxWidth: 520, margin: "0 auto 22px" }}>The guided route begins with foundations and ends by connecting execution, state, consensus, fees, and the current protocol frontier.</p>
             <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-              <Link to="/deep-dives" className="btn btn-grad">Start deep dives <ArrowRight size={16} /></Link>
+              {finishChapter && <Link to={`/deep-dives/${finishChapter.id}`} className="btn btn-grad">Open the final track <ArrowRight size={16} /></Link>}
               <Link to="/docs" className="btn btn-ghost">Open reference <FileText size={15} /></Link>
             </div>
           </div>

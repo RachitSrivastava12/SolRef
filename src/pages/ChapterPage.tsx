@@ -49,6 +49,14 @@ export default function ChapterPage() {
             <span className="eyebrow">What you'll be able to do</span>
           </div>
           <p style={{ fontSize: 15.5, color: "var(--text-mid)", lineHeight: 1.7 }}>{chapter.outcome}</p>
+          {chapter.prerequisites.length > 0 && (
+            <p style={{ fontSize: 13, color: "var(--text-dim)", lineHeight: 1.6, marginTop: 12 }}>
+              Read first: {chapter.prerequisites.map((prerequisiteId, index) => {
+                const prerequisite = chapters.find((item) => item.id === prerequisiteId);
+                return prerequisite ? <span key={prerequisiteId}>{index > 0 && " · "}<Link to={`/deep-dives/${prerequisite.id}`} style={{ color: "var(--text-mid)" }}>{prerequisite.title}</Link></span> : null;
+              })}
+            </p>
+          )}
         </div>
 
         {/* ordered path */}
@@ -93,10 +101,19 @@ export default function ChapterPage() {
           </div>
         </section>
 
+        <a
+          href={`https://github.com/RachitSrivastava12/SolRef/issues/new?template=reference-feedback.yml&title=${encodeURIComponent(`[Track] ${chapter.title}`)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ display: "inline-block", marginBottom: 32, color: "var(--text-mid)", fontSize: 13 }}
+        >
+          Report where this track became unclear ↗
+        </a>
+
         {/* source notes */}
         {chapter.sourceNotes?.length ? (
           <section style={{ marginBottom: 36 }}>
-            <div className="eyebrow" style={{ marginBottom: 12 }}>Engineering Solana lens</div>
+            <div className="eyebrow" style={{ marginBottom: 12 }}>Track notes</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
               {chapter.sourceNotes.map((n) => (
                 <div key={n} style={{ fontSize: 14, color: "var(--text-mid)", lineHeight: 1.65, background: "var(--surface)", borderLeft: "2px solid var(--line-2)", borderRadius: 9, padding: "12px 15px" }}>{n}</div>

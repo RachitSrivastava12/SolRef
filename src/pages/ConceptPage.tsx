@@ -7,6 +7,7 @@ import {
 import Layout from "../components/Layout";
 import DocsNav from "../components/DocsNav";
 import { concepts, conceptById, metaFor, iconFor, levelMeta } from "../lib/concepts";
+import type { ConceptLink } from "../lib/concepts";
 import { chapterConcepts, chapterForConceptId } from "../lib/chapters";
 import { deepDiveFor } from "../lib/deepDives";
 import ConceptDiagram, { hasDiagram } from "../lib/Diagrams";
@@ -39,6 +40,8 @@ export default function ConceptPage() {
 
   const m = concept ? metaFor(concept.title) : null;
   const deepDive = m ? deepDiveFor(m.id) : undefined;
+  const references = [...(concept?.links ?? []), ...(deepDive?.links ?? [])]
+    .filter((link, index, all) => all.findIndex((item) => item.url === link.url) === index) as ConceptLink[];
   const chapter = m ? chapterForConceptId(m.id) : undefined;
   const chapterItems = chapter ? chapterConcepts(chapter) : [];
 
@@ -53,7 +56,7 @@ export default function ConceptPage() {
       ["facts", "Key facts"],
       concept.commonMistakes?.length && ["mistakes", "Common mistakes"],
       ["code", "Code"],
-      concept.links?.length && ["resources", "Resources"],
+      references.length > 0 && ["resources", "Sources"],
     ].filter(Boolean) as [string, string][];
   }, [concept, m, deepDive]);
 
@@ -73,7 +76,6 @@ export default function ConceptPage() {
   const idx = concepts.findIndex((c) => metaFor(c.title).id === m.id);
   const prev = idx > 0 ? concepts[idx - 1] : null;
   const next = idx < concepts.length - 1 ? concepts[idx + 1] : null;
-  const isRust = /fn\s|use solana_program|entrypoint!/.test(concept.code);
 
   const copy = () => { try { navigator.clipboard.writeText(concept.code); } catch { /* noop */ } setCopied(true); setTimeout(() => setCopied(false), 1800); };
 
@@ -149,7 +151,7 @@ export default function ConceptPage() {
               </div>
               {deepDive.sourceNotes?.length ? (
                 <div className="deep-dive__source">
-                  <span className="eyebrow">Engineering Solana lens</span>
+                  <span className="eyebrow">Context notes</span>
                   <ul>
                     {deepDive.sourceNotes.map((note) => <li key={note}>{note}</li>)}
                   </ul>
@@ -238,7 +240,7 @@ export default function ConceptPage() {
                     <i style={{ width: 9, height: 9, borderRadius: 99, background: "#2a2a2a", display: "block" }} />
                     <i style={{ width: 9, height: 9, borderRadius: 99, background: "#2a2a2a", display: "block" }} />
                   </span>
-                  {isRust ? "rust" : "typescript"}
+                  {concept.codeLanguage}
                 </span>
                 <button onClick={copy} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 7, background: "var(--surface-2)", border: "1px solid var(--line-2)", color: copied ? "var(--neon-green)" : "var(--text-dim)", fontSize: 11.5, fontFamily: "var(--font-mono)" }}>
                   {copied ? <Check size={12} /> : <Copy size={12} />}{copied ? "Copied" : "Copy"}
@@ -251,13 +253,13 @@ export default function ConceptPage() {
           </section>
 
           {/* resources */}
-          {concept.links?.length ? (
+          {references.length ? (
             <section id="resources" style={{ scrollMarginTop: "calc(var(--nav-h) + 8px)", marginBottom: 44 }}>
-              <h2 className="doc-h2" style={{ marginBottom: 16 }}>Resources</h2>
+              <h2 className="doc-h2" style={{ marginBottom: 16 }}>Sources & further reading</h2>
               <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-                {concept.links.map((l) => (
+                {references.map((l) => (
                   <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer" className="card card-lift" style={{ padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-                    <span style={{ fontSize: 14, fontWeight: 500 }}>{l.label}</span>
+                    <span style={{ fontSize: 14, fontWeight: 500 }}>{l.label}<small style={{ display: "block", color: "var(--text-dim)", fontSize: 11.5, marginTop: 3 }}>Source type: {l.sourceKind === "unclassified" ? "needs classification" : l.sourceKind}</small></span>
                     <ExternalLink size={14} style={{ color: "var(--text-dim)", flexShrink: 0 }} />
                   </a>
                 ))}

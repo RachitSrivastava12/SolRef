@@ -76,9 +76,8 @@ export default function DocsIndex() {
             <div className="chapter-list">
               {chapters.slice(0, 3).map((chapter, i) => {
                 const refs = chapterConcepts(chapter);
-                const first = refs[0]?.meta.id ?? "";
                 return (
-                  <Link key={chapter.id} to={first ? `/docs/${first}` : "/deep-dives"} className="chapter-row chapter-row--compact">
+                  <Link key={chapter.id} to={`/deep-dives/${chapter.id}`} className="chapter-row chapter-row--compact">
                     <div className="chapter-row__meta">
                       <span>0{i + 1}</span>
                       <em>{chapter.domain}</em>

@@ -39,8 +39,8 @@ export const innovations: Innovation[] = [
     name: "Turbine",
     icon: "Network",
     mechanism: "Erasure-coded shreds",
-    impact: "Propagates data via a tree; O(n log n) scaling",
-    summary: "Turbine solves the bandwidth bottleneck by fragmenting blocks into erasure-coded shreds of ~1228 bytes, distributed through a stake-weighted tree where each validator forwards to a neighborhood of peers. This BitTorrent-style propagation keeps throughput high with Forward Error Correction even under packet loss.",
+    impact: "Spreads block data through a stake-weighted tree",
+    summary: "Turbine divides block data into erasure-coded shreds and forwards them through a stake-weighted tree. Validators can use enough data and coding shreds to recover missing pieces. Rotor, a planned Alpenglow phase, may replace Turbine later; it is not live.",
     conceptId: "turbine",
     accent: "green",
   },
@@ -48,8 +48,8 @@ export const innovations: Innovation[] = [
     name: "Gulf Stream",
     icon: "Wifi",
     mechanism: "Leader-ahead forwarding",
-    impact: "Eliminates mempools; RPCs forward to leaders",
-    summary: "Gulf Stream removes the public mempool by forwarding transactions directly to upcoming leaders in the deterministic schedule. RPC nodes pre-cache and route transactions to the next leaders before their slots begin — preventing the frontrunning common on Ethereum and keeping the network performant under load.",
+    impact: "Leader-ahead forwarding; queues still exist",
+    summary: "Gulf Stream describes a leader-ahead forwarding design: RPCs can use the known leader schedule to send transactions to upcoming leaders. This does not mean transactions never queue or that private order flow is impossible. Provider behavior and retries still matter.",
     conceptId: "gulf-stream",
     accent: "green",
   },
@@ -58,7 +58,7 @@ export const innovations: Innovation[] = [
     icon: "Cpu",
     mechanism: "Parallel execution",
     impact: "Processes non-conflicting accounts across threads",
-    summary: "Sealevel is the parallel smart-contract runtime that executes tens of thousands of contracts at once. By requiring every instruction to declare its account dependencies upfront, the runtime identifies non-overlapping transactions for concurrent execution — a multi-threaded environment that maximizes modern CPU hardware.",
+    summary: "Sealevel is Solana's model for scheduling transactions that do not conflict on account access. Programs and instructions declare the accounts they need, allowing validator software to run some transactions concurrently. Transactions that write the same account must be sequenced.",
     conceptId: "sealevel",
     accent: "blue",
   },
@@ -66,16 +66,16 @@ export const innovations: Innovation[] = [
     name: "Pipelining",
     icon: "Activity",
     mechanism: "TPU stage management",
-    impact: "Saturates Fetch / Verify / Bank / Write cycles",
-    summary: "The Transaction Processing Unit uses a four-stage pipeline to streamline a transaction's lifecycle inside validator hardware: Fetching (kernel level), Verification (GPU-accelerated signatures), Banking (Sealevel execution), and Writing (ledger updates). This keeps CPU, GPU, and SSD consistently saturated.",
+    impact: "Splits validator work into stages",
+    summary: "Validator clients split transaction handling into stages such as receiving packets, verifying signatures, executing transactions, and recording block data. The exact stage layout and hardware acceleration depend on the client version. Under Alpenglow, Proof of History no longer paces block production.",
     accent: "blue",
   },
   {
     name: "Cloudbreak",
     icon: "HardDrive",
     mechanism: "Memory-mapped DB",
-    impact: "Horizontally-scaled storage; O(1) lookup",
-    summary: "Cloudbreak is the accounts database optimized for concurrent reads and writes using memory-mapped files. It scales horizontally across multiple disks so account lookups stay O(1) regardless of database growth — essential for sub-second confirmations as the network scales to billions of accounts.",
+    impact: "Stores and indexes current account state",
+    summary: "Cloudbreak is Solana's account-storage design, built for concurrent reads and writes across validator storage. Current Agave implementations use AccountsDB components including account files, indexes, and caches. Lookup cost and storage behavior depend on the implementation and workload.",
     accent: "purple",
   },
   {
@@ -101,9 +101,9 @@ export const innovations: Innovation[] = [
   {
     name: "Firedancer",
     icon: "Flame",
-    mechanism: "Independent C client",
-    impact: "Client diversity; 600k+ TPS demonstrated",
-    summary: "Firedancer is a from-scratch validator client written in C by Jump Crypto, independent of the Rust Agave client. A second implementation means a consensus bug in one client can't halt the chain. With kernel-bypass networking and a tile-based architecture, it raises the performance ceiling on the path toward 1M TPS — the hybrid Frankendancer already runs a meaningful share of stake.",
+    mechanism: "Independent C validator client",
+    impact: "Adds another implementation of Solana's validator software",
+    summary: "Firedancer is an independently built Solana validator client from Jump Crypto. Its repository publishes mainnet-ready releases and describes a tile-based design with specialized networking. The Solana Foundation's current Alpenglow migration guidance says Firedancer and Frankendancer were not supported for that migration, so operators must check current compatibility before choosing a release. Client diversity can reduce shared-software risk but does not guarantee network safety.",
     conceptId: "firedancer",
     frontier: true,
     accent: "blue",
@@ -111,9 +111,9 @@ export const innovations: Innovation[] = [
   {
     name: "DoubleZero",
     icon: "Globe",
-    mechanism: "Dedicated fiber + multicast",
-    impact: "Up to ~50% lower consensus latency",
-    summary: "DoubleZero is a private fiber network for validators — a 'Network Layer 1' that bypasses the public internet for consensus traffic. FPGAs filter and deduplicate at line rate while multicast broadcasts each block to all validators at once instead of relaying hop-by-hop. Mainnet-beta launched in 2025 with a large share of staked SOL connected, complementing Alpenglow's faster finality.",
+    mechanism: "Opt-in network for validator traffic",
+    impact: "Adds an alternate path for participating validators",
+    summary: "DoubleZero is an opt-in networking service for validators. Participating operators can route some validator traffic over dedicated network links. Its coverage, performance, and effect depend on location, configuration, and adoption; it does not replace public internet connectivity for users.",
     conceptId: "doublezero",
     frontier: true,
     accent: "purple",
@@ -125,12 +125,12 @@ export interface LifecycleStep {
   n: number; title: string; trigger: string; detail: string; icon: string;
 }
 export const lifecycle: LifecycleStep[] = [
-  { n: 1, title: "Client signs", trigger: "Wallet signTransaction event", detail: "User signs the transaction (max 1232 bytes) with their private key locally.", icon: "Lock" },
+  { n: 1, title: "Client signs", trigger: "Wallet signTransaction event", detail: "The wallet signs a legacy/v0 transaction up to 1,232 bytes or a v1 transaction up to 4,096 bytes.", icon: "Lock" },
   { n: 2, title: "RPC forwarding", trigger: "RPC receives packet via HTTPS/WSS", detail: "Node validates the packet and identifies the upcoming leaders from the deterministic schedule.", icon: "Wifi" },
   { n: 3, title: "TPU execution", trigger: "TPU Fetch stage receives packet", detail: "The current leader executes the transaction inside its ~200ms mainnet slot, entering the Sealevel parallel runtime.", icon: "Cpu" },
-  { n: 4, title: "Turbine propagation", trigger: "TPU Write stage completes", detail: "The block is fragmented into ~1228-byte data and coding shreds, distributed recursively across the validator tree.", icon: "Network" },
+  { n: 4, title: "Turbine propagation", trigger: "TPU Write stage completes", detail: "The block data is divided into data and coding shreds, then forwarded through a stake-weighted validator tree.", icon: "Network" },
   { n: 5, title: "Votor consensus", trigger: "Validators exchange direct votes", detail: "Votor validators sign votes with BLS keys and aggregate them into certificates outside the transaction stream. Mainnet blocks no longer include Tower vote transactions.", icon: "Shield" },
-  { n: 6, title: "Finalization", trigger: "Votor certificate finalizes the bank", detail: "Alpenglow targets roughly 150ms finality, down from about 12.8 seconds under Tower. On mainnet, `confirmed` and `finalized` now describe the same state.", icon: "CheckCircle" },
+  { n: 6, title: "Finalization", trigger: "Votor certificate finalizes the bank", detail: "Alpenglow targets roughly 150ms finality, down from about 12.8 seconds under Tower. On mainnet, `confirmed` and `finalized` currently describe the same state; new code should prefer `finalized`.", icon: "CheckCircle" },
 ];
 
 // Commitment states.
@@ -139,7 +139,7 @@ export interface TxState {
   label: string; definition: string; ux: string; color: string;
 }
 export const txStates: TxState[] = [
-  { key: "processed", label: "Processed", definition: "Leader processed the tx; not yet voted on. Susceptible to rollbacks.", ux: "Only for real-time optimistic UI feedback — never release funds.", color: "var(--text-mid)" },
-  { key: "confirmed", label: "Confirmed", definition: "Votor has finalized the bank; this describes the same consensus state as `finalized` on mainnet.", ux: "Use for consensus-confirmed app actions. `processed` remains provisional.", color: "var(--sol-green)" },
-  { key: "finalized", label: "Finalized", definition: "Same finalized Votor consensus state as `confirmed` on mainnet.", ux: "Apps can keep requesting `finalized`; it no longer waits for Tower's 32-slot rooting.", color: "var(--sol-green)" },
+  { key: "processed", label: "Processed", definition: "A validator has processed the transaction, but it is still provisional and may be rolled back.", ux: "Use for quick, temporary UI feedback; wait for consensus before treating the action as final.", color: "var(--text-mid)" },
+  { key: "confirmed", label: "Confirmed", definition: "Currently the same Votor consensus state as `finalized` on mainnet; planned for removal in a later release.", ux: "Prefer `finalized` in new code. `processed` remains provisional.", color: "var(--sol-green)" },
+  { key: "finalized", label: "Finalized", definition: "Votor's finalized consensus state on mainnet.", ux: "Use for actions that need final confirmation; the target is roughly 150ms.", color: "var(--sol-green)" },
 ];
